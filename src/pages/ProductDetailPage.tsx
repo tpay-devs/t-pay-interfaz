@@ -9,13 +9,11 @@ import { useDishCustomization } from '@/hooks/useDishCustomization';
 import { Tables } from '@/integrations/supabase/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Helper type for the UI
 interface UIProduct extends Tables<'menu_items'> {
   rating?: number;
   badge?: string;
 }
 
-// Helper type for Extras (We strictly need the ID now)
 interface UIExtra {
   id: string;
   name: string;
@@ -31,7 +29,6 @@ const ProductDetailPage = () => {
   const [product, setProduct] = useState<UIProduct | null>(null);
   const [loadingProduct, setLoadingProduct] = useState(true);
 
-  // Fetch Ingredients & Extras
   const {
     ingredients: dbIngredients,
     extras: dbExtras,
@@ -61,7 +58,6 @@ const ProductDetailPage = () => {
 
   const [quantity, setQuantity] = useState(1);
   const [removedIngredients, setRemovedIngredients] = useState<string[]>([]);
-  // CHANGED: We now store the full UIExtra object (with ID)
   const [selectedExtras, setSelectedExtras] = useState<UIExtra[]>([]);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -96,8 +92,7 @@ const ProductDetailPage = () => {
     );
   };
 
-  // CHANGED: Toggle logic now compares IDs to be safe
-  const toggleExtra = (extra: UIExtra) => {
+    const toggleExtra = (extra: UIExtra) => {
     setSelectedExtras((prev) =>
       prev.some((e) => e.id === extra.id)
         ? prev.filter((e) => e.id !== extra.id)
@@ -111,7 +106,6 @@ const ProductDetailPage = () => {
   const handleAddToCart = () => {
     setIsAdding(true);
 
-    // We pass the full extra objects (with IDs) to the cart
     addItem({
       id: `${product.id}-${Date.now()}`,
       originalProductId: product.id,
@@ -120,7 +114,7 @@ const ProductDetailPage = () => {
       price: product.price,
       quantity,
       image: product.image_url || "/placeholder.svg",
-      extras: selectedExtras, // This now includes IDs!
+      extras: selectedExtras, 
       removedIngredients,
     });
 

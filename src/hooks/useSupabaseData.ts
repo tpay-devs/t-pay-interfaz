@@ -35,7 +35,6 @@ export const useTableData = (tableQrId: string) => {
     }
   }, [tableQrId])
 
-  // Real-time subscription for table updates
   useEffect(() => {
     if (!tableQrId) return
 
@@ -104,7 +103,6 @@ export const useMenuData = (restaurantId: string) => {
     }
   }, [restaurantId])
 
-  // Real-time subscriptions for menu updates
   useEffect(() => {
     if (!restaurantId) return
 
@@ -119,7 +117,6 @@ export const useMenuData = (restaurantId: string) => {
           filter: `restaurant_id=eq.${restaurantId}`
         },
         () => {
-          // Refetch categories when changes occur
           supabase
             .from('categories')
             .select('*')
@@ -142,7 +139,6 @@ export const useMenuData = (restaurantId: string) => {
           filter: `restaurant_id=eq.${restaurantId}`
         },
         () => {
-          // Refetch menu items when changes occur
           supabase
             .from('menu_items')
             .select('*')

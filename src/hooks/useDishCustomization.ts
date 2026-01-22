@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-// Define interfaces based on actual database schema
 interface Ingredient {
   id: string;
   menu_item_id: string;
@@ -45,7 +44,6 @@ export const useDishCustomization = (menuItemId: string | null): DishCustomizati
       setError(null);
 
       try {
-        // Fetch ingredients and extras in parallel
         const [ingredientsResponse, extrasResponse] = await Promise.all([
           (supabase as any)
             .from('menu_item_ingredients')

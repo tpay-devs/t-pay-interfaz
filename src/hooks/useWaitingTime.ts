@@ -31,7 +31,6 @@ export const useWaitingTime = (restaurantId: string): WaitingTimeData => {
 
         if (error) throw error
 
-        // Get waiting status using raw query since types aren't available
         const { data: waitingData, error: waitingError } = await supabase
           .from('restaurant_waiting_status' as any)
           .select('*')
@@ -53,7 +52,6 @@ export const useWaitingTime = (restaurantId: string): WaitingTimeData => {
     fetchWaitingTime()
   }, [restaurantId])
 
-  // Real-time subscription for waiting time updates
   useEffect(() => {
     if (!restaurantId) return
 
@@ -82,7 +80,6 @@ export const useWaitingTime = (restaurantId: string): WaitingTimeData => {
     }
   }, [restaurantId])
 
-  // Format the waiting time data for display
   const formatWaitingTime = (status: WaitingStatus | null): WaitingTimeData => {
     if (!status || (!status.current_waiting_time_min && !status.current_waiting_time_max)) {
       return {

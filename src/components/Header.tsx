@@ -1,12 +1,12 @@
 import { ShoppingCart, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-import { useRestaurant } from '@/context/RestaurantContext'; // Import this
+import { useRestaurant } from '@/context/RestaurantContext'; 
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Header = () => {
   const { tableNumber, totalItems } = useCart();
-  const { isTakeaway } = useRestaurant(); // Get mode
+  const { isTakeaway } = useRestaurant(); 
   const navigate = useNavigate();
 
   return (

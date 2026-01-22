@@ -49,7 +49,6 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
   const [orderItems, setOrderItems] = useState<OrderItem[]>(() => {
     if (typeof window === 'undefined') return []
     try {
-      // Load from localStorage on initialization
       const saved = localStorage.getItem(`cart_${restaurantId}`)
       return saved ? JSON.parse(saved) : []
     } catch (e) {
@@ -61,7 +60,6 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
   const { toast } = useToast()
   const cartClearedAtRef = useRef<number | null>(null)
 
-  // Persist to localStorage
   useEffect(() => {
     if (!restaurantId) return;
     localStorage.setItem(`cart_${restaurantId}`, JSON.stringify(orderItems));
@@ -158,7 +156,6 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
       const sessionId = getClientSessionId()
       orderData.client_session_id = sessionId
 
-      // Check active orders limit
       const { count, error: countError } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
@@ -177,7 +174,6 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
         return { success: false, orderData: null }
       }
 
-      // Create Order
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert(orderData)
@@ -186,7 +182,6 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
 
       if (orderError) throw orderError
 
-      // Create Items
       const orderItemsData = orderItems.map(item => ({
         order_id: order.id,
         menu_item_id: item.menuItem.id,
@@ -202,7 +197,6 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
 
       if (itemsError) throw itemsError
 
-      // Create Extras
       for (let i = 0; i < orderItems.length; i++) {
         const item = orderItems[i]
         const orderItemId = createdOrderItems[i].id
@@ -223,7 +217,6 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
         }
       }
 
-      // MERCADO PAGO HANDLER
       let checkoutUrl = null;
 
       if (createPayment && paymentMethod === 'mercadopago') {
@@ -250,12 +243,9 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
           console.log("✅ Payment Link Created:", mpData.checkout_url);
           checkoutUrl = mpData.checkout_url;
 
-          // NOTA: Eliminamos el borrado del carrito aquí.
-          // El carrito se mantiene lleno hasta que el usuario complete el pago exitosamente.
 
         } catch (mpException: any) {
           console.error("❌ MercadoPago Exception:", mpException);
-          // Si falla al crear el link, borramos la orden pendiente para no dejar basura
           await supabase.from('orders').delete().eq('id', order.id);
           
           toast({
@@ -268,8 +258,6 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
         }
       }
 
-      // Si es EFECTIVO, borramos el carrito inmediatamente porque ya se "completó" el proceso.
-      // Si es MP (checkoutUrl existe), NO borramos el carrito.
       if (clearCart && !checkoutUrl) {
         setOrderItems([]);
         cartClearedAtRef.current = Date.now();

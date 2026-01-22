@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion';
 
-// Define the shape of a Category object
+
 interface Category {
   id: string;
   name: string;
 }
 
 interface CategoryTabsProps {
-  categories: Category[]; // NEW: Accept the list of categories
+  categories: Category[]; 
   activeCategory: string;
   onCategoryChange: (category: string) => void;
 }

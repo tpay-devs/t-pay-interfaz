@@ -38,7 +38,6 @@ export const useOperationMode = (restaurantId: string) => {
 
     fetchOperationMode();
 
-    // Real-time subscription for operation mode changes
     const channel = supabase
       .channel(`operation-mode-${restaurantId}`)
       .on(

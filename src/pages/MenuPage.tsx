@@ -10,22 +10,18 @@ import { useMenuData } from '@/hooks/useSupabaseData';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const MenuPage = () => {
-  // 1. Get the Restaurant ID from our Context
   const { restaurantId, isLoading: isContextLoading, error } = useRestaurant();
 
-  // 2. Fetch Real Menu Data using the ID
   const { categories, menuItems, loading: isMenuLoading } = useMenuData(restaurantId || "");
 
   const [activeCategory, setActiveCategory] = useState('');
 
-  // 3. Set default category once data loads
   useEffect(() => {
     if (categories.length > 0 && !activeCategory) {
       setActiveCategory(categories[0].id);
     }
   }, [categories, activeCategory]);
 
-  // 4. Loading State
   if (isContextLoading || isMenuLoading) {
     return (
       <div className="min-h-screen bg-background p-4 space-y-8">
@@ -38,7 +34,6 @@ const MenuPage = () => {
     );
   }
 
-  // 5. Error State (No ID or ID not found)
   if (error || !restaurantId) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-background">
@@ -58,21 +53,18 @@ const MenuPage = () => {
     );
   }
 
-  // 6. Data Mapping (Database -> UI Format)
-  // The UI components expect specific fields like 'image' and 'rating' that might be named differently in DB
   const mappedItems = menuItems.map(item => ({
     id: item.id,
     name: item.name,
     description: item.description || "",
     price: item.price,
-    image: item.image_url || "/placeholder.svg", // Handle missing images
+    image: item.image_url || "/placeholder.svg", 
     category: item.category_id || "uncategorized",
-    rating: 5.0, // Default rating as DB doesn't have it yet
-    ingredients: [], // Details are loaded in ProductPage
+    rating: 5.0, 
+    ingredients: [], 
     extras: []
   }));
 
-  // Filter items by the active category tab
   const filteredItems = mappedItems.filter((item) => item.category === activeCategory);
 
   const getCategoryTitle = (catId: string) => {
@@ -89,7 +81,6 @@ const MenuPage = () => {
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.8 }}
-          // Use real cover image if available, else fallback
           src={"/hero-burger.jpg"}
           alt="Hero"
           className="w-full h-full object-cover"
@@ -102,7 +93,7 @@ const MenuPage = () => {
 
       {/* Category Tabs (Mapped from DB) */}
       <CategoryTabs
-        categories={categories.map(c => ({ id: c.id, name: c.name }))} // Pass real categories
+        categories={categories.map(c => ({ id: c.id, name: c.name }))}
         activeCategory={activeCategory}
         onCategoryChange={setActiveCategory}
       />

@@ -44,15 +44,12 @@ const CheckoutPage = () => {
       // 2. Check Result
       if (result && result.success) {
 
-        // --- THE CRITICAL FIX: REDIRECT LOGIC ---
         if (result.checkoutUrl) {
           console.log("🔗 Redirecting to Mercado Pago:", result.checkoutUrl);
 
-          // Force the browser to go to the payment link
           window.location.href = result.checkoutUrl;
-          return; // Stop here so we don't go to SuccessPage yet
+          return; 
         }
-        // ----------------------------------------
 
         // 3. Normal Success (Cash)
         navigate('/success', {
@@ -63,9 +60,9 @@ const CheckoutPage = () => {
             tipAmount,
             total,
             tipPercentage,
-            isTakeaway, // Pass context from useRestaurant
-            pickupCode: result.orderData?.pickup_code, // Pass pickup code from backend
-            restaurantId // Pass restaurant ID for return navigation
+            isTakeaway, 
+            pickupCode: result.orderData?.pickup_code, 
+            restaurantId 
           }
         });
       }
@@ -89,9 +86,8 @@ const CheckoutPage = () => {
 
   const handleReturnToMenu = () => {
     if (isTakeaway && restaurantId) {
-      navigate(`/?id=rst_${restaurantId}`);
+      navigate(`/?id=rst_${restaurantId}`); 
     } else if (table) {
-      // Use qr_code_id if available (Standard), otherwise fallback to tableId (Legacy)
       const qrId = (table as any).qr_code_id || (tableId ? `tbl_${tableId}` : null);
       if (qrId) navigate(`/?id=${qrId}`);
       else navigate('/');
@@ -341,7 +337,7 @@ const CheckoutPage = () => {
             <div className="p-4 border-t border-border bg-background">
               <button
                 onClick={handlePayment}
-                disabled={isSubmitting} // Real Loading State
+                disabled={isSubmitting} 
                 className="w-full py-4 rounded-xl font-semibold bg-primary text-primary-foreground flex items-center justify-center gap-2 disabled:opacity-70"
               >
                 {isSubmitting ? (

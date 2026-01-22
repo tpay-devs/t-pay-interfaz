@@ -12,8 +12,8 @@ interface OrderStatus {
     id: string;
     status: string;
     payment_status: string;
-    payment_method: string; // Nuevo campo necesario
-    mercadopago_preference_id: string | null; // Nuevo campo necesario
+    payment_method: string;
+    mercadopago_preference_id: string | null; 
     order_number: number;
     total_amount: number;
     pickup_code?: string;
@@ -25,13 +25,11 @@ export const OrderStatusTracker = () => {
     const [activeOrders, setActiveOrders] = useState<OrderStatus[]>([]);
     const [isOpen, setIsOpen] = useState(false);
 
-    // Lógica para reintentar el pago (La que te gustó)
     const handleRetryPayment = (preferenceId: string) => {
         const checkoutUrl = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${preferenceId}`;
         window.location.href = checkoutUrl;
     };
 
-    // Poll for active order status
     useEffect(() => {
         if (!restaurantId) return;
 
@@ -39,9 +37,7 @@ export const OrderStatusTracker = () => {
             const sessionId = getClientSessionId();
             if (!sessionId) return;
 
-            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000 * 4).toISOString(); // Look back 1 hour
-
-            // Agregamos payment_method y mercadopago_preference_id a la consulta
+            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000 * 4).toISOString(); 
             const { data, error } = await supabase
                 .from('orders')
                 .select('id, status, payment_status, payment_method, mercadopago_preference_id, order_number, total_amount, pickup_code, created_at')
@@ -72,7 +68,6 @@ export const OrderStatusTracker = () => {
 
         fetchActiveOrders();
 
-        // Poll every 30 seconds
         const interval = setInterval(fetchActiveOrders, 30000);
         return () => clearInterval(interval);
     }, [restaurantId]);
@@ -88,14 +83,12 @@ export const OrderStatusTracker = () => {
     };
 
     const getStatusIcon = (status: string, paymentStatus: string) => {
-        // Si falta pagar, icono de tarjeta
         if (paymentStatus === 'unpaid') return <CreditCard className="w-5 h-5" />;
         if (status === 'preparing') return <ChefHat className="w-5 h-5" />;
         if (status === 'ready') return <CheckCircle2 className="w-5 h-5" />;
         return <Clock className="w-5 h-5" />;
     };
 
-    // Determine the "Primary" status to show on the floating button (Priority: Ready > Preparing > Pending)
     const primaryOrder = activeOrders.find(o => o.status === 'ready') || activeOrders[0];
 
     return (
@@ -143,9 +136,9 @@ export const OrderStatusTracker = () => {
                 <ScrollArea className="flex-1 p-6 pt-2">
                     <div className="space-y-4 pb-8">
                         {activeOrders.map((order) => {
-                            // Detectar si es un pedido MP impago
+                            
                             const isUnpaidMP = 
-    (order.payment_status === 'unpaid' || order.payment_status === 'rejected') && // <--- AGREGADO
+    (order.payment_status === 'unpaid' || order.payment_status === 'rejected') && 
     order.payment_method === 'mercadopago' && 
     order.mercadopago_preference_id;
 
@@ -163,7 +156,7 @@ export const OrderStatusTracker = () => {
                                         <div className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold ${
                                             order.status === 'ready' ? 'bg-green-100 text-green-700' :
                                             order.status === 'preparing' ? 'bg-amber-100 text-amber-700' : 
-                                            isUnpaidMP ? 'bg-yellow-100 text-yellow-800' : // Color alerta para impago
+                                            isUnpaidMP ? 'bg-yellow-100 text-yellow-800' : 
                                             'bg-primary/10 text-primary'
                                         }`}>
                                             {getStatusIcon(order.status, order.payment_status)}

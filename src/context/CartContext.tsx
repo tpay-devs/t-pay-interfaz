@@ -33,7 +33,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
-  const { restaurantId, tableId, table, isTakeaway } = useRestaurant(); // Ensure isTakeaway is grabbed here
+  const { restaurantId, tableId, table, isTakeaway } = useRestaurant();
 
   const orderManager = useOrderManagement(tableId, restaurantId || "", isTakeaway);
 
@@ -108,7 +108,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const subtotal = orderManager.getTotalAmount();
 
   const submitOrder = async (paymentMethod: 'mercadopago' | 'cash', tip: number = 0) => {
-    // CRITICAL FIX: Allow if tableId exists OR if it is takeaway
     if (!tableId && !isTakeaway) {
       console.error("Submission Blocked: No table ID found and not in Takeaway mode.");
       return;

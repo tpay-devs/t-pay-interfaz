@@ -19,7 +19,6 @@ export const useRestaurantData = (restaurantId: string) => {
       try {
         console.log('Fetching restaurant data for ID:', restaurantId)
         
-        // Use RPC function for secure access (bypasses RLS)
         const { data, error: rpcError } = await supabase
           .rpc('get_restaurant_public_info', { 
             restaurant_id_param: restaurantId 

@@ -26,8 +26,8 @@ interface OrderData {
   mercadopagoPreferenceId?: string;
   isTakeaway?: boolean;
   pickupCode?: string;
-  restaurantId?: string; // Fundamental para volver
-  tableId?: string;      // Fundamental para volver a la mesa
+  restaurantId?: string;
+  tableId?: string;
 }
 
 const SuccessPage = () => {
@@ -47,10 +47,10 @@ const SuccessPage = () => {
     // Prioridad 1: Estado de navegación (Si venimos de efectivo)
     // Prioridad 2: Contexto (Si la sesión sigue viva)
     // Prioridad 3: Datos recuperados de la BD (Self-Healing)
-    
+
     const targetRestId = navState?.restaurantId || contextRestaurantId || fetchedOrder?.restaurantId;
     const targetTableId = contextTableId || fetchedOrder?.tableId;
-    
+
     // Determinamos si es Takeaway
     // Es takeaway si el pedido dice que lo es, o si el contexto lo dice
     const targetIsTakeaway = navState?.isTakeaway ?? contextIsTakeaway ?? fetchedOrder?.isTakeaway;
@@ -67,17 +67,15 @@ const SuccessPage = () => {
       // Fallback: Volver al restaurante (sin mesa específica, mejor que pantalla gris)
       navigate(`/?id=rst_${targetRestId}`);
     } else {
-      // Último recurso (si realmente no sabemos nada, lo mandamos al home genérico)
-      // Esto solo pasaría si la base de datos devolvió un pedido sin restaurant_id (imposible)
       console.error("❌ Lost Coordinates. Redirecting to root.");
-      navigate('/'); 
+      navigate('/');
     }
   };
 
   const handleRetryPayment = () => {
     const prefId = fetchedOrder?.mercadopagoPreferenceId || navState?.mercadopagoPreferenceId;
     if (prefId) {
-       window.location.href = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${prefId}`;
+      window.location.href = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${prefId}`;
     }
   };
 
@@ -113,7 +111,7 @@ const SuccessPage = () => {
           query = query
             .eq('client_session_id', sessionId)
             .gte('created_at', fifteenMinutesAgo)
-            .in('payment_status', ['paid', 'pending', 'rejected']) 
+            .in('payment_status', ['paid', 'pending', 'rejected'])
             .order('created_at', { ascending: false })
             .limit(1);
         }
@@ -145,16 +143,15 @@ const SuccessPage = () => {
           mercadopagoPreferenceId: order.mercadopago_preference_id,
           isTakeaway: !!order.pickup_code,
           pickupCode: order.pickup_code,
-          restaurantId: order.restaurant_id, // ✅ GUARDAMOS ESTO PARA EL RETORNO
-          tableId: order.table_id            // ✅ GUARDAMOS ESTO PARA EL RETORNO
+          restaurantId: order.restaurant_id,
+          tableId: order.table_id
         });
 
         if (order.payment_status === 'paid') {
-            clearCart();
+          clearCart();
         }
 
       } catch (err) {
-         // silent
       } finally {
         setIsLoading(false);
       }
@@ -183,7 +180,7 @@ const SuccessPage = () => {
           </div>
           <h2 className="text-xl font-semibold mb-2">No encontramos el pedido</h2>
           <p className="text-muted-foreground mb-6">
-             Si pagaste, espera unos instantes y revisa tu correo.
+            Si pagaste, espera unos instantes y revisa tu correo.
           </p>
           <button onClick={handleReturn} className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-semibold shadow-lg">
             Volver al menú
@@ -197,38 +194,38 @@ const SuccessPage = () => {
   if (activeData.paymentStatus === 'rejected') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
-         <motion.div 
-           initial={{ scale: 0.8, opacity: 0 }}
-           animate={{ scale: 1, opacity: 1 }}
-           className="w-24 h-24 rounded-full bg-red-100 flex items-center justify-center mb-6"
-         >
-            <X className="w-12 h-12 text-red-600" />
-         </motion.div>
-         <h1 className="text-2xl font-bold mb-2 text-destructive">Pago Rechazado</h1>
-         <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
-           Hubo un problema con tu tarjeta o el medio de pago seleccionado.
-         </p>
-         
-         <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
-            <button 
-              onClick={handleRetryPayment}
-              className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
-            >
-              <RefreshCw className="w-4 h-4" /> Reintentar Pago
-            </button>
-            <button 
-              onClick={handleReturn}
-              className="w-full py-4 rounded-xl font-medium text-muted-foreground hover:bg-muted transition-colors"
-            >
-              Volver al menú
-            </button>
-         </div>
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="w-24 h-24 rounded-full bg-red-100 flex items-center justify-center mb-6"
+        >
+          <X className="w-12 h-12 text-red-600" />
+        </motion.div>
+        <h1 className="text-2xl font-bold mb-2 text-destructive">Pago Rechazado</h1>
+        <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
+          Hubo un problema con tu tarjeta o el medio de pago seleccionado.
+        </p>
+
+        <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
+          <button
+            onClick={handleRetryPayment}
+            className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+          >
+            <RefreshCw className="w-4 h-4" /> Reintentar Pago
+          </button>
+          <button
+            onClick={handleReturn}
+            className="w-full py-4 rounded-xl font-medium text-muted-foreground hover:bg-muted transition-colors"
+          >
+            Volver al menú
+          </button>
+        </div>
       </div>
     );
   }
 
   // CASO 3: ÉXITO (Flujo Normal)
-  const { orderNumber, items, subtotal, tipAmount, total, tipPercentage, isTakeaway: orderIsTakeaway, pickupCode } = activeData;
+  const { orderNumber, items, subtotal, tipAmount, total, tipPercentage, isTakeaway: orderIsTakeaway, pickupCode, tableId } = activeData;
 
   const formatPrice = (price: number) => {
     return `$${price.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
@@ -293,7 +290,7 @@ const SuccessPage = () => {
           <Utensils className="w-4 h-4" />
           {/* Mostramos el nombre del restaurante si lo tenemos, o un genérico */}
           <span>
-             {orderIsTakeaway ? 'Para llevar' : (tableId ? 'En Mesa' : 'En Mesa')} • Pedido Exitoso
+            {orderIsTakeaway ? 'Para llevar' : (tableId ? 'En Mesa' : 'En Mesa')} • Pedido Exitoso
           </span>
         </motion.div>
       </div>

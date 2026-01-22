@@ -1,11 +1,8 @@
 import { Plus, Minus } from 'lucide-react';
-// Remove local MenuItem import if possible, but keep for type safety if needed
-// import { MenuItem } from '@/data/menuData'; 
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Define a flexible interface that matches what we actually get from the mapper
 interface ProductCardProps {
   item: {
     id: string;
@@ -22,10 +19,8 @@ const ProductCard = ({ item, index = 0 }: ProductCardProps) => {
   const navigate = useNavigate();
   const { addItem, getProductQuantity, items, updateQuantity, removeItem } = useCart();
   
-  // We check quantity by the Original Product ID
   const quantityInCart = getProductQuantity(item.id);
   
-  // Find the specific line item in the cart to increment/decrement
   const existingCartItem = items.find((i) => i.originalProductId === item.id);
 
   const formatPrice = (price: number) => {
@@ -36,9 +31,7 @@ const ProductCard = ({ item, index = 0 }: ProductCardProps) => {
     e.stopPropagation();
     
     addItem({
-      // Unique instance ID for the UI list
       id: `${item.id}-${Date.now()}`,
-      // CRITICAL FIX: Pass the real UUID so the DB knows what this is
       originalProductId: item.id, 
       name: item.name,
       description: item.description || "",
@@ -54,7 +47,6 @@ const ProductCard = ({ item, index = 0 }: ProductCardProps) => {
     e.stopPropagation();
     if (existingCartItem) {
       if (existingCartItem.quantity > 1) {
-        // Update the specific line item found
         updateQuantity(existingCartItem.id, existingCartItem.quantity - 1);
       } else {
         removeItem(existingCartItem.id);
