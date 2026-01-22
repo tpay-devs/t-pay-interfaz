@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom'; // Quitamos useNavigate
 import { X, Check, Utensils, PartyPopper, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRestaurant } from '@/context/RestaurantContext';
@@ -31,7 +31,7 @@ interface OrderData {
 }
 
 const SuccessPage = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // <-- ELIMINADO: No usaremos navegación SPA
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { clearCart } = useCart();
@@ -42,34 +42,32 @@ const SuccessPage = () => {
 
   const { isTakeaway: contextIsTakeaway, restaurantId: contextRestaurantId, tableId: contextTableId } = useRestaurant();
 
-  // --- LÓGICA DE RETORNO BLINDADA ---
+  // --- LÓGICA DE RETORNO BLINDADA (CON RECARGA) ---
   const handleReturn = () => {
-    // Prioridad 1: Estado de navegación (Si venimos de efectivo)
-    // Prioridad 2: Contexto (Si la sesión sigue viva)
-    // Prioridad 3: Datos recuperados de la BD (Self-Healing)
-
-    const targetRestId = navState?.restaurantId || contextRestaurantId || fetchedOrder?.restaurantId;
-    const targetTableId = contextTableId || fetchedOrder?.tableId;
-
-    // Determinamos si es Takeaway
-    // Es takeaway si el pedido dice que lo es, o si el contexto lo dice
-    const targetIsTakeaway = navState?.isTakeaway ?? contextIsTakeaway ?? fetchedOrder?.isTakeaway;
+    // 1. Recopilar IDs de donde sea posible (Contexto, Estado o Base de Datos)
+    const targetRestId = navState?.restaurantId || fetchedOrder?.restaurantId || contextRestaurantId;
+    const targetTableId = navState?.tableId || fetchedOrder?.tableId || contextTableId;
+    const targetIsTakeaway = navState?.isTakeaway ?? fetchedOrder?.isTakeaway ?? contextIsTakeaway;
 
     console.log("📍 Returning to:", { targetRestId, targetTableId, targetIsTakeaway });
 
+    // 2. Construir la URL de destino
+    let returnUrl = '/';
+
     if (targetIsTakeaway && targetRestId) {
-      // Volver a modo Takeaway
-      navigate(`/?id=rst_${targetRestId}`);
+       // Volver a modo Takeaway
+       returnUrl = `/?id=rst_${targetRestId}`;
     } else if (targetTableId) {
-      // Volver a la Mesa específica (usamos el ID de la tabla directamente)
-      navigate(`/?id=tbl_${targetTableId}`);
+      // Volver a la Mesa específica
+      returnUrl = `/?id=tbl_${targetTableId}`;
     } else if (targetRestId) {
-      // Fallback: Volver al restaurante (sin mesa específica, mejor que pantalla gris)
-      navigate(`/?id=rst_${targetRestId}`);
-    } else {
-      console.error("❌ Lost Coordinates. Redirecting to root.");
-      navigate('/');
+      // Fallback: Volver al restaurante genérico
+      returnUrl = `/?id=rst_${targetRestId}`;
     }
+
+    // 3. 🔥 HARD REFRESH: Forzamos la recarga real del navegador.
+    // Esto obliga a que el Contexto de Restaurante se reinicie y lea el ID nuevo.
+    window.location.href = returnUrl;
   };
 
   const handleRetryPayment = () => {
@@ -103,6 +101,7 @@ const SuccessPage = () => {
         if (orderId) {
           query = query.eq('id', orderId);
         } else {
+          // Buscamos por sesión si no hay ID directo
           const sessionId = getClientSessionId();
           if (!sessionId) throw new Error("No session ID");
 
@@ -120,10 +119,12 @@ const SuccessPage = () => {
         const order = Array.isArray(orders) ? orders[0] : orders;
 
         if (error || !order) {
+          console.error("Error fetching order:", error);
           setIsLoading(false);
           return;
         }
 
+        // Mapeamos los datos para tenerlos listos en el botón de retorno
         const items = order.order_items.map((item: any) => ({
           name: item.menu_items?.name || "Item",
           quantity: item.quantity,
@@ -143,8 +144,8 @@ const SuccessPage = () => {
           mercadopagoPreferenceId: order.mercadopago_preference_id,
           isTakeaway: !!order.pickup_code,
           pickupCode: order.pickup_code,
-          restaurantId: order.restaurant_id,
-          tableId: order.table_id
+          restaurantId: order.restaurant_id, // Vital para el retorno
+          tableId: order.table_id            // Vital para el retorno
         });
 
         if (order.payment_status === 'paid') {
@@ -152,6 +153,7 @@ const SuccessPage = () => {
         }
 
       } catch (err) {
+        console.error("Crash fetching order:", err);
       } finally {
         setIsLoading(false);
       }
@@ -182,15 +184,15 @@ const SuccessPage = () => {
           <p className="text-muted-foreground mb-6">
             Si pagaste, espera unos instantes y revisa tu correo.
           </p>
-          <button onClick={handleReturn} className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-semibold shadow-lg">
-            Volver al menú
+          <button onClick={() => window.location.href = '/'} className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-semibold shadow-lg">
+            Volver al inicio
           </button>
         </div>
       </div>
     );
   }
 
-  // CASO 2: PAGO RECHAZADO (Pantalla Roja)
+  // CASO 2: PAGO RECHAZADO
   if (activeData.paymentStatus === 'rejected') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
@@ -203,7 +205,7 @@ const SuccessPage = () => {
         </motion.div>
         <h1 className="text-2xl font-bold mb-2 text-destructive">Pago Rechazado</h1>
         <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
-          Hubo un problema con tu tarjeta o el medio de pago seleccionado.
+          Hubo un problema con tu tarjeta.
         </p>
 
         <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
@@ -224,7 +226,7 @@ const SuccessPage = () => {
     );
   }
 
-  // CASO 3: ÉXITO (Flujo Normal)
+  // CASO 3: ÉXITO
   const { orderNumber, items, subtotal, tipAmount, total, tipPercentage, isTakeaway: orderIsTakeaway, pickupCode, tableId } = activeData;
 
   const formatPrice = (price: number) => {
@@ -242,13 +244,12 @@ const SuccessPage = () => {
         animate={{ y: 0, opacity: 1 }}
         className="flex items-center justify-center p-4 border-b border-border/30 relative"
       >
-        <motion.button
-          whileTap={{ scale: 0.9 }}
+        <button
           onClick={handleReturn}
           className="absolute left-4 w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
         >
           <X className="w-5 h-5" />
-        </motion.button>
+        </button>
         <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Confirmación</span>
       </motion.header>
 
@@ -288,14 +289,12 @@ const SuccessPage = () => {
           className="flex items-center gap-2 text-muted-foreground text-sm bg-muted px-4 py-2 rounded-full"
         >
           <Utensils className="w-4 h-4" />
-          {/* Mostramos el nombre del restaurante si lo tenemos, o un genérico */}
           <span>
-            {orderIsTakeaway ? 'Para llevar' : (tableId ? 'En Mesa' : 'En Mesa')} • Pedido Exitoso
+            {orderIsTakeaway ? 'Para llevar' : (tableId ? 'En Mesa' : 'Restaurante')} • Pedido Exitoso
           </span>
         </motion.div>
       </div>
 
-      {/* Order Details */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -365,13 +364,12 @@ const SuccessPage = () => {
         transition={{ delay: 0.85 }}
         className="px-6 mt-10 space-y-3 pb-10"
       >
-        <motion.button
-          whileTap={{ scale: 0.98 }}
+        <button
           onClick={handleReturn}
-          className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-semibold text-sm shadow-lg shadow-primary/20"
+          className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-semibold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity"
         >
           Volver al menú
-        </motion.button>
+        </button>
       </motion.div>
     </motion.div>
   );
