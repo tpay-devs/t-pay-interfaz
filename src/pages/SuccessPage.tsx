@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom'; // Quitamos useNavigate
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { X, Check, Utensils, PartyPopper, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRestaurant } from '@/context/RestaurantContext';
@@ -31,7 +31,6 @@ interface OrderData {
 }
 
 const SuccessPage = () => {
-  // const navigate = useNavigate(); // <-- ELIMINADO: No usaremos navegación SPA
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { clearCart } = useCart();
@@ -42,31 +41,53 @@ const SuccessPage = () => {
 
   const { isTakeaway: contextIsTakeaway, restaurantId: contextRestaurantId, tableId: contextTableId } = useRestaurant();
 
-  // --- LÓGICA DE RETORNO BLINDADA (CON RECARGA) ---
+  // --- LÓGICA DE RETORNO BLINDADA (CON RESPALDO DE LOCALSTORAGE) ---
   const handleReturn = () => {
-    // 1. Recopilar IDs de donde sea posible (Contexto, Estado o Base de Datos)
-    const targetRestId = navState?.restaurantId || fetchedOrder?.restaurantId || contextRestaurantId;
-    const targetTableId = navState?.tableId || fetchedOrder?.tableId || contextTableId;
-    const targetIsTakeaway = navState?.isTakeaway ?? fetchedOrder?.isTakeaway ?? contextIsTakeaway;
+    // 1. Intentar obtener datos de la orden cargada o navegación (Lo más fiable)
+    let targetRestId = fetchedOrder?.restaurantId || navState?.restaurantId || contextRestaurantId;
+    let targetTableId = fetchedOrder?.tableId || navState?.tableId || contextTableId;
 
-    console.log("📍 Returning to:", { targetRestId, targetTableId, targetIsTakeaway });
-
-    // 2. Construir la URL de destino
-    let returnUrl = '/';
-
-    if (targetIsTakeaway && targetRestId) {
-       // Volver a modo Takeaway
-       returnUrl = `/?id=rst_${targetRestId}`;
-    } else if (targetTableId) {
-      // Volver a la Mesa específica
-      returnUrl = `/?id=tbl_${targetTableId}`;
-    } else if (targetRestId) {
-      // Fallback: Volver al restaurante genérico
-      returnUrl = `/?id=rst_${targetRestId}`;
+    // 2. Si fallan (son null/undefined), buscar en el "Bolsillo" (LocalStorage - Migas de Pan)
+    if (!targetRestId) {
+      targetRestId = localStorage.getItem('backup_restaurant_id') || undefined;
+      console.log("🍞 Usando backup restaurant_id:", targetRestId);
+    }
+    
+    if (!targetTableId) {
+      targetTableId = localStorage.getItem('backup_table_id') || undefined;
+      console.log("🍞 Usando backup table_id:", targetTableId);
     }
 
-    // 3. 🔥 HARD REFRESH: Forzamos la recarga real del navegador.
-    // Esto obliga a que el Contexto de Restaurante se reinicie y lea el ID nuevo.
+    // 3. Determinar si es Takeaway
+    // Es takeaway si la orden lo dice, o si no hay mesa definida
+    const targetIsTakeaway = navState?.isTakeaway ?? fetchedOrder?.isTakeaway ?? contextIsTakeaway ?? (!targetTableId);
+
+    console.log("📍 Returning Strategy:", { 
+      targetRestId, 
+      targetTableId, 
+      isTakeaway: targetIsTakeaway 
+    });
+
+    // 4. Construir URL
+    let returnUrl = '/';
+
+    if (targetRestId) {
+      if (targetIsTakeaway) {
+         // Volver a modo Takeaway
+         returnUrl = `/?id=rst_${targetRestId}`;
+      } else if (targetTableId) {
+         // Volver a Mesa específica
+         returnUrl = `/?id=tbl_${targetTableId}`;
+      } else {
+         // Fallback a restaurante si falla la mesa
+         returnUrl = `/?id=rst_${targetRestId}`;
+      }
+    } else {
+      // Ultimo recurso si ni el localStorage tiene datos (muy raro)
+      console.error("❌ No se pudo recuperar ID ni del backup.");
+    }
+
+    // 5. Hard Refresh para reiniciar el contexto limpio con el nuevo ID
     window.location.href = returnUrl;
   };
 
@@ -101,7 +122,6 @@ const SuccessPage = () => {
         if (orderId) {
           query = query.eq('id', orderId);
         } else {
-          // Buscamos por sesión si no hay ID directo
           const sessionId = getClientSessionId();
           if (!sessionId) throw new Error("No session ID");
 
@@ -124,7 +144,6 @@ const SuccessPage = () => {
           return;
         }
 
-        // Mapeamos los datos para tenerlos listos en el botón de retorno
         const items = order.order_items.map((item: any) => ({
           name: item.menu_items?.name || "Item",
           quantity: item.quantity,
@@ -144,9 +163,13 @@ const SuccessPage = () => {
           mercadopagoPreferenceId: order.mercadopago_preference_id,
           isTakeaway: !!order.pickup_code,
           pickupCode: order.pickup_code,
-          restaurantId: order.restaurant_id, // Vital para el retorno
-          tableId: order.table_id            // Vital para el retorno
+          restaurantId: order.restaurant_id,
+          tableId: order.table_id
         });
+
+        // 🔥 NUEVO: Guardar respaldo inmediato en LocalStorage (Migas de Pan)
+        if (order.restaurant_id) localStorage.setItem('backup_restaurant_id', order.restaurant_id);
+        if (order.table_id) localStorage.setItem('backup_table_id', order.table_id);
 
         if (order.payment_status === 'paid') {
           clearCart();

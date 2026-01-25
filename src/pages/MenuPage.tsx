@@ -4,7 +4,8 @@ import RestaurantInfo from '@/components/RestaurantInfo';
 import CategoryTabs from '@/components/CategoryTabs';
 import ProductSection from '@/components/ProductSection';
 import FloatingCart from '@/components/FloatingCart';
-import { OrderStatusTracker } from "@/components/OrderStatusTracker";import { motion, AnimatePresence } from 'framer-motion';
+import { OrderStatusTracker } from "@/components/OrderStatusTracker";
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useMenuData } from '@/hooks/useSupabaseData';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,6 +13,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 const MenuPage = () => {
   const { restaurantId, isLoading: isContextLoading, error } = useRestaurant();
 
+  // Aseguramos pasar un string vacío si es null para que el hook no falle, 
+  // pero la validación de abajo nos protegerá.
   const { categories, menuItems, loading: isMenuLoading } = useMenuData(restaurantId || "");
 
   const [activeCategory, setActiveCategory] = useState('');
@@ -22,19 +25,10 @@ const MenuPage = () => {
     }
   }, [categories, activeCategory]);
 
-  if (isContextLoading || isMenuLoading) {
-    return (
-      <div className="min-h-screen bg-background p-4 space-y-8">
-        <Skeleton className="h-72 w-full rounded-b-3xl" />
-        <div className="space-y-4 px-4">
-          <Skeleton className="h-12 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !restaurantId) {
+  // --- 🔥 CAMBIO 1: VALIDACIÓN DE ERROR PRIMERO ---
+  // Si ya terminó de cargar el contexto y (hay error O falta el ID), mostramos error.
+  // Esto evita que se quede mostrando Skeletons eternamente si el ID es undefined.
+  if (!isContextLoading && (error || !restaurantId)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-background">
         <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mb-6">
@@ -47,7 +41,21 @@ const MenuPage = () => {
           {error?.message || "No pudimos identificar el restaurante. Por favor escanea el código QR nuevamente."}
         </p>
         <div className="p-4 bg-muted/50 rounded-xl text-xs text-muted-foreground break-all">
-          ID: {restaurantId || "Desconocido"}
+          ID Estado: {restaurantId ? "Inválido" : "No detectado"}
+        </div>
+      </div>
+    );
+  }
+
+  // --- 🔥 CAMBIO 2: SKELETONS DESPUÉS ---
+  // Solo mostramos carga si tenemos un ID válido y estamos esperando datos.
+  if (isContextLoading || isMenuLoading) {
+    return (
+      <div className="min-h-screen bg-background p-4 space-y-8">
+        <Skeleton className="h-72 w-full rounded-b-3xl" />
+        <div className="space-y-4 px-4">
+          <Skeleton className="h-12 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
         </div>
       </div>
     );
