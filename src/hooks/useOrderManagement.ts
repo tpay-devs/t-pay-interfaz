@@ -164,13 +164,13 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
         .neq('status', 'cancelled')
         .neq('status', 'delivered')
         .neq('status', 'completed')
-        .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString()) 
+        .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
 
       if (countError) throw countError
 
       if (count !== null && count >= 5) {
         alert("Has alcanzado el límite de 5 pedidos activos.\n\nPor favor, espera a que tus pedidos anteriores sean entregados o completados antes de realizar uno nuevo.")
-        setIsSubmitting(false) 
+        setIsSubmitting(false)
         return { success: false, orderData: null }
       }
 
@@ -223,10 +223,13 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
         try {
           console.log("💳 Initiating MercadoPago Preference...");
 
+          // Include session ID in return URL so we can restore it after payment redirect
+          const returnUrlWithSession = `${window.location.origin}/success?sid=${sessionId}`;
+
           const { data: mpData, error: mpError } = await supabase.functions.invoke('create-mercadopago-preference', {
             body: {
               orderId: order.id,
-              returnUrl: `${window.location.origin}/success`
+              returnUrl: returnUrlWithSession
             }
           });
 
@@ -247,7 +250,7 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
         } catch (mpException: any) {
           console.error("❌ MercadoPago Exception:", mpException);
           await supabase.from('orders').delete().eq('id', order.id);
-          
+
           toast({
             title: "Error de Pago",
             description: mpException.message || "Error generando el pago. Intente nuevamente.",

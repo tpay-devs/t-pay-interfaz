@@ -35,6 +35,12 @@ const SuccessPage = () => {
   const [searchParams] = useSearchParams();
   const { clearCart } = useCart();
 
+  // 🔥 CRITICAL: Restore session ID from URL params immediately on mount
+  // This handles iOS Safari which resets localStorage after external redirects
+  useEffect(() => {
+    getClientSessionId(); // This will check URL ?sid= param and restore to localStorage
+  }, []);
+
   const navState = location.state as OrderData | null;
   const [fetchedOrder, setFetchedOrder] = useState<OrderData | null>(null);
   const [isLoading, setIsLoading] = useState(!navState);
@@ -52,7 +58,7 @@ const SuccessPage = () => {
       targetRestId = localStorage.getItem('backup_restaurant_id') || undefined;
       console.log("🍞 Usando backup restaurant_id:", targetRestId);
     }
-    
+
     if (!targetTableId) {
       targetTableId = localStorage.getItem('backup_table_id') || undefined;
       console.log("🍞 Usando backup table_id:", targetTableId);
@@ -62,10 +68,10 @@ const SuccessPage = () => {
     // Es takeaway si la orden lo dice, o si no hay mesa definida
     const targetIsTakeaway = navState?.isTakeaway ?? fetchedOrder?.isTakeaway ?? contextIsTakeaway ?? (!targetTableId);
 
-    console.log("📍 Returning Strategy:", { 
-      targetRestId, 
-      targetTableId, 
-      isTakeaway: targetIsTakeaway 
+    console.log("📍 Returning Strategy:", {
+      targetRestId,
+      targetTableId,
+      isTakeaway: targetIsTakeaway
     });
 
     // 4. Construir URL
@@ -73,16 +79,16 @@ const SuccessPage = () => {
 
     if (targetRestId) {
       if (targetIsTakeaway) {
-         // Volver a modo Takeaway
-         returnUrl = `/?id=rst_${targetRestId}`;
+        // Volver a modo Takeaway
+        returnUrl = `/?id=rst_${targetRestId}`;
       } else if (targetTableId) {
-         // 🔥 FIX: Si el ID ya trae 'tbl_', lo usamos directo. Si es un UUID viejo, le agregamos el prefijo por seguridad.
-         // (Aunque con el nuevo fetch, debería venir siempre correcto como 'tbl_...')
-         const finalId = targetTableId.startsWith('tbl_') ? targetTableId : `tbl_${targetTableId}`;
-         returnUrl = `/?id=${finalId}`; 
+        // 🔥 FIX: Si el ID ya trae 'tbl_', lo usamos directo. Si es un UUID viejo, le agregamos el prefijo por seguridad.
+        // (Aunque con el nuevo fetch, debería venir siempre correcto como 'tbl_...')
+        const finalId = targetTableId.startsWith('tbl_') ? targetTableId : `tbl_${targetTableId}`;
+        returnUrl = `/?id=${finalId}`;
       } else {
-         // Fallback a restaurante si falla la mesa
-         returnUrl = `/?id=rst_${targetRestId}`;
+        // Fallback a restaurante si falla la mesa
+        returnUrl = `/?id=rst_${targetRestId}`;
       }
     } else {
       // Ultimo recurso si ni el localStorage tiene datos (muy raro)

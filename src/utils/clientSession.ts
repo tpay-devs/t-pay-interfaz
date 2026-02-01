@@ -16,7 +16,7 @@ function generateUUID(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  
+
   // Fallback for older browsers
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
@@ -29,22 +29,35 @@ function generateUUID(): string {
  * Gets or creates a client session ID
  * The ID persists in localStorage across page refreshes but is unique per browser/device
  * 
+ * IMPORTANT: Also checks URL params for session ID (from MercadoPago return redirect)
+ * to handle iOS Safari which resets localStorage after external redirects.
+ * 
  * @returns The client session ID
  */
 export function getClientSessionId(): string {
-  // Check if we already have a session ID in localStorage
   if (typeof window !== 'undefined') {
+    // 1. First, check if there's a session ID in the URL (from MercadoPago return)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSessionId = urlParams.get('sid');
+
+    if (urlSessionId) {
+      // Restore the session ID to localStorage
+      localStorage.setItem(CLIENT_SESSION_STORAGE_KEY, urlSessionId);
+      return urlSessionId;
+    }
+
+    // 2. Check localStorage for existing session
     const stored = localStorage.getItem(CLIENT_SESSION_STORAGE_KEY);
     if (stored) {
       return stored;
     }
-    
-    // Generate new session ID and store it
+
+    // 3. Generate new session ID and store it
     const newSessionId = generateUUID();
     localStorage.setItem(CLIENT_SESSION_STORAGE_KEY, newSessionId);
     return newSessionId;
   }
-  
+
   // Fallback for SSR environments (shouldn't happen in this app)
   return generateUUID();
 }
