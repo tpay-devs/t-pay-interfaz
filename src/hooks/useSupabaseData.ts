@@ -32,6 +32,8 @@ export const useTableData = (tableQrId: string) => {
 
     if (tableQrId) {
       fetchTable()
+    } else {
+      setLoading(false)
     }
   }, [tableQrId])
 

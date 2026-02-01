@@ -45,10 +45,8 @@ const CheckoutPage = () => {
       if (result && result.success) {
 
         if (result.checkoutUrl) {
-          console.log("🔗 Redirecting to Mercado Pago:", result.checkoutUrl);
-
           window.location.href = result.checkoutUrl;
-          return; 
+          return;
         }
 
         // 3. Normal Success (Cash)
@@ -60,9 +58,11 @@ const CheckoutPage = () => {
             tipAmount,
             total,
             tipPercentage,
-            isTakeaway, 
-            pickupCode: result.orderData?.pickup_code, 
-            restaurantId 
+            isTakeaway,
+            pickupCode: result.orderData?.pickup_code,
+            restaurantId,
+            // 🔥 FIX: Pass the real qr_code_id so SuccessPage can build the correct return URL
+            tableId: (table as any)?.qr_code_id || tableId
           }
         });
       }
@@ -86,7 +86,7 @@ const CheckoutPage = () => {
 
   const handleReturnToMenu = () => {
     if (isTakeaway && restaurantId) {
-      navigate(`/?id=rst_${restaurantId}`); 
+      navigate(`/?id=rst_${restaurantId}`);
     } else if (table) {
       const qrId = (table as any).qr_code_id || (tableId ? `tbl_${tableId}` : null);
       if (qrId) navigate(`/?id=${qrId}`);
@@ -337,7 +337,7 @@ const CheckoutPage = () => {
             <div className="p-4 border-t border-border bg-background">
               <button
                 onClick={handlePayment}
-                disabled={isSubmitting} 
+                disabled={isSubmitting}
                 className="w-full py-4 rounded-xl font-semibold bg-primary text-primary-foreground flex items-center justify-center gap-2 disabled:opacity-70"
               >
                 {isSubmitting ? (

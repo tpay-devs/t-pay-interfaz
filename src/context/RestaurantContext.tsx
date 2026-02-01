@@ -28,13 +28,14 @@ export const RestaurantProvider = ({ children }: { children: React.ReactNode }) 
 
   const resourceId = idParam
     ? (isTakeaway
-       ? idParam.slice(4)
-       : (isTable ? idParam.slice(4) : idParam))
+      ? idParam.slice(4)
+      : (isTable ? idParam.slice(4) : idParam))
     : "";
 
-  const { table, loading: tableLoading, error: tableError } = useTableData(
-    (!isTakeaway && resourceId) ? resourceId : ""
-  );
+  // Use the FULL idParam (with tbl_ prefix) since qr_code_id stores "tbl_xxxxx"
+  const tableQrIdToFetch = (!isTakeaway && isTable && idParam) ? idParam : "";
+
+  const { table, loading: tableLoading, error: tableError } = useTableData(tableQrIdToFetch);
 
   const effectiveRestaurantId = isTakeaway
     ? resourceId
@@ -46,7 +47,7 @@ export const RestaurantProvider = ({ children }: { children: React.ReactNode }) 
 
   const isLoading = isTakeaway
     ? restaurantLoading
-    : (tableLoading || (table && restaurantLoading)); 
+    : (tableLoading || (table && restaurantLoading));
 
   const missingIdError = !idParam ? new Error("No ID provided in URL") : null;
   const error = missingIdError || tableError || restaurantError;
@@ -57,7 +58,7 @@ export const RestaurantProvider = ({ children }: { children: React.ReactNode }) 
     isTakeaway,
     restaurant: restaurantData as Restaurant | null,
     table: table as Table | null,
-    isLoading: Boolean(isLoading), 
+    isLoading: Boolean(isLoading),
     error: error ? (error as Error) : null
   }), [effectiveRestaurantId, table, isTakeaway, restaurantData, isLoading, error]);
 
