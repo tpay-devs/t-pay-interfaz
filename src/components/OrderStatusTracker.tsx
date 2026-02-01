@@ -13,7 +13,7 @@ interface OrderStatus {
     status: string;
     payment_status: string;
     payment_method: string;
-    mercadopago_preference_id: string | null; 
+    mercadopago_preference_id: string | null;
     order_number: number;
     total_amount: number;
     pickup_code?: string;
@@ -25,19 +25,58 @@ export const OrderStatusTracker = () => {
     const [activeOrders, setActiveOrders] = useState<OrderStatus[]>([]);
     const [isOpen, setIsOpen] = useState(false);
 
+    // 🔍 DEBUG: Visible state for mobile testing
+    const [debugInfo, setDebugInfo] = useState<{
+        sessionId: string;
+        restaurantId: string | null;
+        orderCount: number;
+        lastFetch: string;
+        queryError: string | null;
+    } | null>(null);
+
     const handleRetryPayment = (preferenceId: string) => {
         const checkoutUrl = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${preferenceId}`;
         window.location.href = checkoutUrl;
     };
 
     useEffect(() => {
-        if (!restaurantId) return;
+        // 🔍 DEBUG: Log what we're working with
+        const sessionId = getClientSessionId();
+        console.log('🔍 [OrderStatusTracker] Debug:', {
+            restaurantId,
+            sessionId,
+            hasRestaurantId: !!restaurantId,
+            hasSessionId: !!sessionId
+        });
+
+        // Update visible debug info
+        setDebugInfo(prev => ({
+            sessionId: sessionId || 'NO_SESSION',
+            restaurantId: restaurantId,
+            orderCount: prev?.orderCount ?? 0,
+            lastFetch: new Date().toLocaleTimeString(),
+            queryError: prev?.queryError ?? null
+        }));
+
+        if (!restaurantId) {
+            console.log('🔍 [OrderStatusTracker] No restaurantId, skipping fetch');
+            return;
+        }
 
         const fetchActiveOrders = async () => {
-            const sessionId = getClientSessionId();
-            if (!sessionId) return;
+            if (!sessionId) {
+                console.log('🔍 [OrderStatusTracker] No sessionId, skipping fetch');
+                setDebugInfo(prev => prev ? { ...prev, queryError: 'NO_SESSION_ID' } : null);
+                return;
+            }
 
-            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000 * 4).toISOString(); 
+            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000 * 4).toISOString();
+            console.log('🔍 [OrderStatusTracker] Fetching orders with:', {
+                restaurantId,
+                sessionId,
+                since: fifteenMinutesAgo
+            });
+
             const { data, error } = await supabase
                 .from('orders')
                 .select('id, status, payment_status, payment_method, mercadopago_preference_id, order_number, total_amount, pickup_code, created_at')
@@ -48,6 +87,16 @@ export const OrderStatusTracker = () => {
                 .neq('status', 'completed')
                 .gte('created_at', fifteenMinutesAgo)
                 .order('created_at', { ascending: false });
+
+            console.log('🔍 [OrderStatusTracker] Query result:', { data, error, count: data?.length });
+
+            // Update debug info with results
+            setDebugInfo(prev => prev ? {
+                ...prev,
+                orderCount: data?.length ?? 0,
+                lastFetch: new Date().toLocaleTimeString(),
+                queryError: error?.message ?? null
+            } : null);
 
             if (!error && data) {
                 setActiveOrders(data.map(d => ({
@@ -72,7 +121,19 @@ export const OrderStatusTracker = () => {
         return () => clearInterval(interval);
     }, [restaurantId]);
 
-    if (activeOrders.length === 0) return null;
+    // 🔍 DEBUG: Show visible debug overlay when no orders found
+    if (activeOrders.length === 0) {
+        return debugInfo ? (
+            <div className="fixed bottom-4 left-4 z-50 bg-black/80 text-white text-[10px] p-2 rounded-lg max-w-[200px] font-mono">
+                <div className="text-yellow-400 font-bold mb-1">DEBUG MODE</div>
+                <div>SID: {debugInfo.sessionId.slice(0, 8)}...</div>
+                <div>RID: {debugInfo.restaurantId?.slice(0, 8) || 'null'}...</div>
+                <div>Orders: {debugInfo.orderCount}</div>
+                <div>Last: {debugInfo.lastFetch}</div>
+                {debugInfo.queryError && <div className="text-red-400">Err: {debugInfo.queryError}</div>}
+            </div>
+        ) : null;
+    }
 
     const getStatusLabel = (status: string, paymentStatus: string) => {
         if (paymentStatus === 'pending' || paymentStatus === 'unpaid') return "Pendiente de pago";
@@ -136,11 +197,11 @@ export const OrderStatusTracker = () => {
                 <ScrollArea className="flex-1 p-6 pt-2">
                     <div className="space-y-4 pb-8">
                         {activeOrders.map((order) => {
-                            
-                            const isUnpaidMP = 
-    (order.payment_status === 'unpaid' || order.payment_status === 'rejected') && 
-    order.payment_method === 'mercadopago' && 
-    order.mercadopago_preference_id;
+
+                            const isUnpaidMP =
+                                (order.payment_status === 'unpaid' || order.payment_status === 'rejected') &&
+                                order.payment_method === 'mercadopago' &&
+                                order.mercadopago_preference_id;
 
                             return (
                                 <div key={order.id} className="bg-muted/30 border border-border rounded-xl p-4 relative overflow-hidden">
@@ -153,12 +214,11 @@ export const OrderStatusTracker = () => {
                                                 {order.pickup_code || order.order_number}
                                             </p>
                                         </div>
-                                        <div className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold ${
-                                            order.status === 'ready' ? 'bg-green-100 text-green-700' :
-                                            order.status === 'preparing' ? 'bg-amber-100 text-amber-700' : 
-                                            isUnpaidMP ? 'bg-yellow-100 text-yellow-800' : 
-                                            'bg-primary/10 text-primary'
-                                        }`}>
+                                        <div className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold ${order.status === 'ready' ? 'bg-green-100 text-green-700' :
+                                            order.status === 'preparing' ? 'bg-amber-100 text-amber-700' :
+                                                isUnpaidMP ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-primary/10 text-primary'
+                                            }`}>
                                             {getStatusIcon(order.status, order.payment_status)}
                                             {getStatusLabel(order.status, order.payment_status)}
                                         </div>
@@ -172,7 +232,7 @@ export const OrderStatusTracker = () => {
                                     {/* BOTÓN DE PAGO INYECTADO AQUÍ */}
                                     {isUnpaidMP && (
                                         <div className="mt-3 pt-2">
-                                            <Button 
+                                            <Button
                                                 className="w-full bg-primary font-bold shadow-md"
                                                 onClick={() => handleRetryPayment(order.mercadopago_preference_id!)}
                                             >
