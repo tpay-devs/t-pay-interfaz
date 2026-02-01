@@ -76,8 +76,11 @@ const SuccessPage = () => {
          // Volver a modo Takeaway
          returnUrl = `/?id=rst_${targetRestId}`;
       } else if (targetTableId) {
-   returnUrl = `/?id=${targetTableId}`; 
-}else {
+         // 🔥 FIX: Si el ID ya trae 'tbl_', lo usamos directo. Si es un UUID viejo, le agregamos el prefijo por seguridad.
+         // (Aunque con el nuevo fetch, debería venir siempre correcto como 'tbl_...')
+         const finalId = targetTableId.startsWith('tbl_') ? targetTableId : `tbl_${targetTableId}`;
+         returnUrl = `/?id=${finalId}`; 
+      } else {
          // Fallback a restaurante si falla la mesa
          returnUrl = `/?id=rst_${targetRestId}`;
       }
@@ -115,8 +118,11 @@ const SuccessPage = () => {
               quantity,
               unit_price,
               menu_items (name)
+            ),
+            tables (       
+              qr_code_id   
             )
-          `);
+          `); // 🔥 FIX: Agregamos tables(qr_code_id) al select
 
         if (orderId) {
           query = query.eq('id', orderId);
@@ -150,6 +156,11 @@ const SuccessPage = () => {
           extras: []
         }));
 
+        // 🔥 FIX CRITICO: Intentamos obtener el QR code ID real de la relación tables
+        // Si tables es null (es takeaway o error), usamos null.
+        // Si tables existe pero qr_code_id es null, hacemos fallback a table_id (por si acaso).
+        const realTableQrId = order.tables?.qr_code_id || (order.table_id ? order.table_id : undefined);
+
         setFetchedOrder({
           orderNumber: order.order_number.toString(),
           items,
@@ -163,12 +174,12 @@ const SuccessPage = () => {
           isTakeaway: !!order.pickup_code,
           pickupCode: order.pickup_code,
           restaurantId: order.restaurant_id,
-          tableId: order.table_id
+          tableId: realTableQrId // 🔥 Usamos el ID correcto (tbl_...)
         });
 
-        // 🔥 NUEVO: Guardar respaldo inmediato en LocalStorage (Migas de Pan)
+        // 🔥 NUEVO: Guardar respaldo inmediato en LocalStorage con el ID correcto
         if (order.restaurant_id) localStorage.setItem('backup_restaurant_id', order.restaurant_id);
-        if (order.table_id) localStorage.setItem('backup_table_id', order.table_id);
+        if (realTableQrId) localStorage.setItem('backup_table_id', realTableQrId);
 
         if (order.payment_status === 'paid') {
           clearCart();
