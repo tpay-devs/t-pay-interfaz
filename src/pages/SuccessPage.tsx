@@ -41,7 +41,7 @@ const SuccessPage = () => {
 
   const { isTakeaway: contextIsTakeaway, restaurantId: contextRestaurantId, tableId: contextTableId } = useRestaurant();
 
-  // --- LÓGICA DE RETORNO BLINDADA (CON RESPALDO DE LOCALSTORAGE) ---
+  // --- LÓGICA DE RETORNO (CON RESPALDO DE LOCALSTORAGE) ---
   const handleReturn = () => {
     // 1. Intentar obtener datos de la orden cargada o navegación (Lo más fiable)
     let targetRestId = fetchedOrder?.restaurantId || navState?.restaurantId || contextRestaurantId;
@@ -76,9 +76,8 @@ const SuccessPage = () => {
          // Volver a modo Takeaway
          returnUrl = `/?id=rst_${targetRestId}`;
       } else if (targetTableId) {
-         // Volver a Mesa específica
-         returnUrl = `/?id=tbl_${targetTableId}`;
-      } else {
+   returnUrl = `/?id=${targetTableId}`; 
+}else {
          // Fallback a restaurante si falla la mesa
          returnUrl = `/?id=rst_${targetRestId}`;
       }

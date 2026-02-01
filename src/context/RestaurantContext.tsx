@@ -24,9 +24,12 @@ export const RestaurantProvider = ({ children }: { children: React.ReactNode }) 
 
   const idParam = searchParams.get("id");
   const isTakeaway = idParam?.startsWith("rst_") ?? false;
+  const isTable = idParam?.startsWith("tbl_") ?? false;
 
   const resourceId = idParam
-    ? (isTakeaway ? idParam.slice(4) : idParam)
+    ? (isTakeaway
+       ? idParam.slice(4)
+       : (isTable ? idParam.slice(4) : idParam))
     : "";
 
   const { table, loading: tableLoading, error: tableError } = useTableData(
