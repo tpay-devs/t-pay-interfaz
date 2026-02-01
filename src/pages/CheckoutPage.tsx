@@ -132,7 +132,9 @@ const CheckoutPage = () => {
             <h1 className="text-base font-semibold">
               {step === 'cart' ? 'Tu pedido' : 'Confirmar pago'}
             </h1>
-            <span className="text-xs text-muted-foreground">Mesa {tableNumber}</span>
+            <span className="text-xs text-muted-foreground">
+              {isTakeaway ? 'Para llevar' : `Mesa ${tableNumber}`}
+            </span>
           </div>
           <div className="w-10" />
         </div>

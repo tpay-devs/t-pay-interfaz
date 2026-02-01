@@ -63,32 +63,34 @@ serve(async (req) => {
     // 2. RECALCULO DE SEGURIDAD (AUDITORÍA)
     // No confiamos en 'order.total_amount' ni en 'order_items.unit_price' que vinieron del frontend.
     // Reconstruimos el precio desde cero usando la base de datos.
-    
+
     let calculatedTotal = 0;
-    
+
+    const restaurantName = restaurant.name || 'Restaurante';
+
     const items = order.order_items.map((item: any) => {
       // Precio Base Real del Producto
       const realBasePrice = Number(item.menu_items?.price || 0);
-      
+
       // Calcular precio de Extras Reales
       let extrasCost = 0;
       let extrasDescription = "";
-      
+
       if (item.order_item_added_extras && item.order_item_added_extras.length > 0) {
         item.order_item_added_extras.forEach((ex: any) => {
-           const realExtraPrice = Number(ex.extra?.price || 0);
-           extrasCost += (realExtraPrice * ex.quantity);
-           extrasDescription += ` + ${ex.extra?.name}`;
+          const realExtraPrice = Number(ex.extra?.price || 0);
+          extrasCost += (realExtraPrice * ex.quantity);
+          extrasDescription += ` + ${ex.extra?.name}`;
         });
       }
 
       const finalUnitLoadingPrice = realBasePrice + (extrasCost / item.quantity); // Distribuimos el costo del extra en la unidad para MP
       const totalItemPrice = (realBasePrice * item.quantity) + extrasCost;
-      
+
       calculatedTotal += totalItemPrice;
 
       return {
-        title: `${item.menu_items?.name}${extrasDescription}`,
+        title: `${restaurantName} - ${item.menu_items?.name}${extrasDescription}`,
         unit_price: Number(finalUnitLoadingPrice.toFixed(2)), // MP necesita precio unitario
         quantity: item.quantity,
         currency_id: 'ARS'
@@ -100,7 +102,7 @@ serve(async (req) => {
     // pero debemos validarla.
     // Estrategia: Asumimos que la diferencia entre el Total Reportado y el Calculado era la propina,
     // pero si el total reportado era menor al calculado (hack), forzamos el calculado.
-    
+
     // En este caso, simplificaremos: Si la orden tenía 'total_amount' mayor al calculado, la diferencia es propina.
     const reportedTotal = Number(order.total_amount);
     let tipAmount = 0;
@@ -109,8 +111,8 @@ serve(async (req) => {
       tipAmount = reportedTotal - calculatedTotal;
       // Validar que la propina no sea absurda (ej: mayor al 50% del total) para evitar lavado
       if (tipAmount > calculatedTotal * 0.5) {
-         console.warn("⚠️ Suspicious tip amount detected. Clamping.");
-         // Opcional: Rechazar o ajustar. Por ahora lo dejamos pasar pero lo logueamos.
+        console.warn("⚠️ Suspicious tip amount detected. Clamping.");
+        // Opcional: Rechazar o ajustar. Por ahora lo dejamos pasar pero lo logueamos.
       }
     }
 
@@ -120,8 +122,8 @@ serve(async (req) => {
     // Si el precio que calculamos es diferente al que dice la base de datos (porque el frontend mintió
     // o hubo un error de redondeo), actualizamos la base de datos con la VERDAD antes de cobrar.
     if (Math.abs(finalTotal - reportedTotal) > 0.05) { // 5 centavos de tolerancia
-       console.log(`⚠️ Price Mismatch! Fixing Order. DB says: ${reportedTotal}, Real is: ${finalTotal}`);
-       await supabase.from('orders').update({ total_amount: finalTotal }).eq('id', orderId);
+      console.log(`⚠️ Price Mismatch! Fixing Order. DB says: ${reportedTotal}, Real is: ${finalTotal}`);
+      await supabase.from('orders').update({ total_amount: finalTotal }).eq('id', orderId);
     }
 
     // Agregar propina como item para MercadoPago
@@ -133,7 +135,7 @@ serve(async (req) => {
         currency_id: 'ARS'
       });
     }
-    
+
     // 5. CREAR PREFERENCIA
     const notificationUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/mercadopago-webhook`;
 
@@ -151,9 +153,9 @@ serve(async (req) => {
         pending: returnUrl,
       },
       auto_return: isLocalhost ? undefined : 'approved',
-      binary_mode: true, 
+      binary_mode: true,
       notification_url: notificationUrl,
-      statement_descriptor: `ORDER #${order.order_number || orderId.slice(0,4)}`
+      statement_descriptor: `${restaurantName.substring(0, 16)} #${order.order_number || orderId.slice(0, 4)}`
     };
 
     console.log('Creating MP Preference with Real Calculated Values:', JSON.stringify(preferenceData, null, 2));
@@ -176,7 +178,7 @@ serve(async (req) => {
 
     // Update restaurant info if needed (Collector ID check)
     if (mpData.collector_id && !restaurant.mercadopago_user_id) {
-        await supabase.from('restaurants').update({ mercadopago_user_id: mpData.collector_id.toString() }).eq('id', restaurant.id);
+      await supabase.from('restaurants').update({ mercadopago_user_id: mpData.collector_id.toString() }).eq('id', restaurant.id);
     }
 
     // Save Preference ID

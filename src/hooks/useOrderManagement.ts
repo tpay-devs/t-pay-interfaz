@@ -263,6 +263,8 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
 
       if (clearCart && !checkoutUrl) {
         setOrderItems([]);
+        // Immediately sync to localStorage to avoid race condition with navigation
+        localStorage.setItem(`cart_${restaurantId}`, JSON.stringify([]));
         cartClearedAtRef.current = Date.now();
       }
 
