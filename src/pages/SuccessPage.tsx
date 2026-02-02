@@ -35,10 +35,9 @@ const SuccessPage = () => {
   const [searchParams] = useSearchParams();
   const { clearCart } = useCart();
 
-  // 🔥 CRITICAL: Restore session ID from URL params immediately on mount
-  // This handles iOS Safari which resets localStorage after external redirects
+  // Restore session ID from URL params on mount (handles iOS Safari localStorage reset)
   useEffect(() => {
-    getClientSessionId(); // This will check URL ?sid= param and restore to localStorage
+    getClientSessionId();
   }, []);
 
   const navState = location.state as OrderData | null;
@@ -56,23 +55,13 @@ const SuccessPage = () => {
     // 2. Si fallan (son null/undefined), buscar en el "Bolsillo" (LocalStorage - Migas de Pan)
     if (!targetRestId) {
       targetRestId = localStorage.getItem('backup_restaurant_id') || undefined;
-      console.log("🍞 Usando backup restaurant_id:", targetRestId);
     }
 
     if (!targetTableId) {
       targetTableId = localStorage.getItem('backup_table_id') || undefined;
-      console.log("🍞 Usando backup table_id:", targetTableId);
     }
 
-    // 3. Determinar si es Takeaway
-    // Es takeaway si la orden lo dice, o si no hay mesa definida
     const targetIsTakeaway = navState?.isTakeaway ?? fetchedOrder?.isTakeaway ?? contextIsTakeaway ?? (!targetTableId);
-
-    console.log("📍 Returning Strategy:", {
-      targetRestId,
-      targetTableId,
-      isTakeaway: targetIsTakeaway
-    });
 
     // 4. Construir URL
     let returnUrl = '/';
@@ -82,8 +71,6 @@ const SuccessPage = () => {
         // Volver a modo Takeaway
         returnUrl = `/?id=rst_${targetRestId}`;
       } else if (targetTableId) {
-        // 🔥 FIX: Si el ID ya trae 'tbl_', lo usamos directo. Si es un UUID viejo, le agregamos el prefijo por seguridad.
-        // (Aunque con el nuevo fetch, debería venir siempre correcto como 'tbl_...')
         const finalId = targetTableId.startsWith('tbl_') ? targetTableId : `tbl_${targetTableId}`;
         returnUrl = `/?id=${finalId}`;
       } else {
@@ -91,8 +78,7 @@ const SuccessPage = () => {
         returnUrl = `/?id=rst_${targetRestId}`;
       }
     } else {
-      // Ultimo recurso si ni el localStorage tiene datos (muy raro)
-      console.error("❌ No se pudo recuperar ID ni del backup.");
+      // Fallback if no ID found
     }
 
     // 5. Hard Refresh para reiniciar el contexto limpio con el nuevo ID
@@ -128,7 +114,7 @@ const SuccessPage = () => {
             tables (       
               qr_code_id   
             )
-          `); // 🔥 FIX: Agregamos tables(qr_code_id) al select
+          `);
 
         if (orderId) {
           query = query.eq('id', orderId);
@@ -150,7 +136,6 @@ const SuccessPage = () => {
         const order = Array.isArray(orders) ? orders[0] : orders;
 
         if (error || !order) {
-          console.error("Error fetching order:", error);
           setIsLoading(false);
           return;
         }
@@ -162,9 +147,7 @@ const SuccessPage = () => {
           extras: []
         }));
 
-        // 🔥 FIX CRITICO: Intentamos obtener el QR code ID real de la relación tables
-        // Si tables es null (es takeaway o error), usamos null.
-        // Si tables existe pero qr_code_id es null, hacemos fallback a table_id (por si acaso).
+        // Get real QR code ID from table relation for accurate return URL
         const realTableQrId = order.tables?.qr_code_id || (order.table_id ? order.table_id : undefined);
 
         setFetchedOrder({
@@ -180,10 +163,10 @@ const SuccessPage = () => {
           isTakeaway: !!order.pickup_code,
           pickupCode: order.pickup_code,
           restaurantId: order.restaurant_id,
-          tableId: realTableQrId // 🔥 Usamos el ID correcto (tbl_...)
+          tableId: realTableQrId
         });
 
-        // 🔥 NUEVO: Guardar respaldo inmediato en LocalStorage con el ID correcto
+        // Save backup IDs to localStorage for return navigation
         if (order.restaurant_id) localStorage.setItem('backup_restaurant_id', order.restaurant_id);
         if (realTableQrId) localStorage.setItem('backup_table_id', realTableQrId);
 
@@ -192,7 +175,6 @@ const SuccessPage = () => {
         }
 
       } catch (err) {
-        console.error("Crash fetching order:", err);
       } finally {
         setIsLoading(false);
       }

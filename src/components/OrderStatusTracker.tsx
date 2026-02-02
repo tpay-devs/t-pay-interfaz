@@ -25,57 +25,24 @@ export const OrderStatusTracker = () => {
     const [activeOrders, setActiveOrders] = useState<OrderStatus[]>([]);
     const [isOpen, setIsOpen] = useState(false);
 
-    // 🔍 DEBUG: Visible state for mobile testing
-    const [debugInfo, setDebugInfo] = useState<{
-        sessionId: string;
-        restaurantId: string | null;
-        orderCount: number;
-        lastFetch: string;
-        queryError: string | null;
-    } | null>(null);
-
     const handleRetryPayment = (preferenceId: string) => {
         const checkoutUrl = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${preferenceId}`;
         window.location.href = checkoutUrl;
     };
 
     useEffect(() => {
-        // 🔍 DEBUG: Log what we're working with
         const sessionId = getClientSessionId();
-        console.log('🔍 [OrderStatusTracker] Debug:', {
-            restaurantId,
-            sessionId,
-            hasRestaurantId: !!restaurantId,
-            hasSessionId: !!sessionId
-        });
-
-        // Update visible debug info
-        setDebugInfo(prev => ({
-            sessionId: sessionId || 'NO_SESSION',
-            restaurantId: restaurantId,
-            orderCount: prev?.orderCount ?? 0,
-            lastFetch: new Date().toLocaleTimeString(),
-            queryError: prev?.queryError ?? null
-        }));
 
         if (!restaurantId) {
-            console.log('🔍 [OrderStatusTracker] No restaurantId, skipping fetch');
             return;
         }
 
         const fetchActiveOrders = async () => {
             if (!sessionId) {
-                console.log('🔍 [OrderStatusTracker] No sessionId, skipping fetch');
-                setDebugInfo(prev => prev ? { ...prev, queryError: 'NO_SESSION_ID' } : null);
                 return;
             }
 
             const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000 * 4).toISOString();
-            console.log('🔍 [OrderStatusTracker] Fetching orders with:', {
-                restaurantId,
-                sessionId,
-                since: fifteenMinutesAgo
-            });
 
             const { data, error } = await supabase
                 .from('orders')
@@ -87,16 +54,6 @@ export const OrderStatusTracker = () => {
                 .neq('status', 'completed')
                 .gte('created_at', fifteenMinutesAgo)
                 .order('created_at', { ascending: false });
-
-            console.log('🔍 [OrderStatusTracker] Query result:', { data, error, count: data?.length });
-
-            // Update debug info with results
-            setDebugInfo(prev => prev ? {
-                ...prev,
-                orderCount: data?.length ?? 0,
-                lastFetch: new Date().toLocaleTimeString(),
-                queryError: error?.message ?? null
-            } : null);
 
             if (!error && data) {
                 setActiveOrders(data.map(d => ({
@@ -121,36 +78,25 @@ export const OrderStatusTracker = () => {
         return () => clearInterval(interval);
     }, [restaurantId]);
 
-    // 🔍 DEBUG: Show visible debug overlay when no orders found
-    if (activeOrders.length === 0) {
-        return debugInfo ? (
-            <div className="fixed bottom-4 left-4 z-50 bg-black/80 text-white text-[10px] p-2 rounded-lg max-w-[200px] font-mono">
-                <div className="text-yellow-400 font-bold mb-1">DEBUG MODE</div>
-                <div>SID: {debugInfo.sessionId.slice(0, 8)}...</div>
-                <div>RID: {debugInfo.restaurantId?.slice(0, 8) || 'null'}...</div>
-                <div>Orders: {debugInfo.orderCount}</div>
-                <div>Last: {debugInfo.lastFetch}</div>
-                {debugInfo.queryError && <div className="text-red-400">Err: {debugInfo.queryError}</div>}
-            </div>
-        ) : null;
-    }
+    if (activeOrders.length === 0) return null;
 
     const getStatusLabel = (status: string, paymentStatus: string) => {
         if (paymentStatus === 'pending' || paymentStatus === 'unpaid') return "Pendiente de pago";
         if (status === 'pending') return "Enviado a cocina";
-        if (status === 'preparing') return "Preparando";
-        if (status === 'ready') return "Listo para retirar";
+        if (status === 'paid') return "Pagado";
+        if (status === 'preparation') return "Preparando";
+        if (status === 'ready_to_deliver') return "Listo para retirar";
         return "En proceso";
     };
 
     const getStatusIcon = (status: string, paymentStatus: string) => {
         if (paymentStatus === 'unpaid') return <CreditCard className="w-5 h-5" />;
-        if (status === 'preparing') return <ChefHat className="w-5 h-5" />;
-        if (status === 'ready') return <CheckCircle2 className="w-5 h-5" />;
+        if (status === 'preparation') return <ChefHat className="w-5 h-5" />;
+        if (status === 'ready_to_deliver') return <CheckCircle2 className="w-5 h-5" />;
         return <Clock className="w-5 h-5" />;
     };
 
-    const primaryOrder = activeOrders.find(o => o.status === 'ready') || activeOrders[0];
+    const primaryOrder = activeOrders.find(o => o.status === 'ready_to_deliver') || activeOrders[0];
 
     return (
         <Sheet open={isOpen} onOpenChange={setIsOpen}>

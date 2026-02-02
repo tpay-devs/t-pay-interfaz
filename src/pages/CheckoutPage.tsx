@@ -61,7 +61,6 @@ const CheckoutPage = () => {
             isTakeaway,
             pickupCode: result.orderData?.pickup_code,
             restaurantId,
-            // 🔥 FIX: Pass the real qr_code_id so SuccessPage can build the correct return URL
             tableId: (table as any)?.qr_code_id || tableId
           }
         });
