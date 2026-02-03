@@ -30,21 +30,34 @@ const MenuPage = () => {
   // Cleanup abandoned draft orders (takeaway + MP that weren't paid)
   useEffect(() => {
     const cleanupDraftOrders = async () => {
-      if (!isTakeaway || !restaurantId) return;
+      console.log('🧹 [Cleanup] Starting...', { isTakeaway, restaurantId });
+
+      if (!isTakeaway || !restaurantId) {
+        console.log('🧹 [Cleanup] Skipped - not takeaway or no restaurantId');
+        return;
+      }
 
       const sessionId = getClientSessionId();
-      if (!sessionId) return;
+      console.log('🧹 [Cleanup] SessionId:', sessionId);
 
-      const { data: draftOrders } = await supabase
+      if (!sessionId) {
+        console.log('🧹 [Cleanup] Skipped - no sessionId');
+        return;
+      }
+
+      const { data: draftOrders, error } = await supabase
         .from('orders')
         .select('id')
         .eq('client_session_id', sessionId)
         .eq('restaurant_id', restaurantId)
         .eq('status', 'draft');
 
+      console.log('🧹 [Cleanup] Found draft orders:', draftOrders, 'Error:', error);
+
       if (draftOrders && draftOrders.length > 0) {
         for (const order of draftOrders) {
-          await supabase.from('orders').delete().eq('id', order.id);
+          const { error: deleteError } = await supabase.from('orders').delete().eq('id', order.id);
+          console.log('🧹 [Cleanup] Deleted order:', order.id, 'Error:', deleteError);
         }
       }
     };
