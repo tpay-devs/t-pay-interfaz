@@ -270,31 +270,33 @@ const CheckoutPage = () => {
                   {[
                     { id: 'mercadopago' as const, icon: CreditCard, label: 'Mercado Pago', sublabel: 'Paga con tu plata en cuenta o tarjetas agregadas a Mercado Pago' },
                     { id: 'cash' as const, icon: Banknote, label: 'Efectivo', sublabel: 'Pagar al mozo' },
-                  ].map(({ id, icon: Icon, label, sublabel }) => (
-                    <button
-                      key={id}
-                      onClick={() => setPaymentMethod(id)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all border ${paymentMethod === id
-                        ? 'bg-primary/5 border-primary'
-                        : 'bg-background border-border hover:border-primary/50'
-                        }`}
-                    >
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${paymentMethod === id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                        }`}>
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div className="text-left flex-1">
-                        <span className="font-medium text-sm block">{label}</span>
-                        <span className="text-xs text-muted-foreground">{sublabel}</span>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === id ? 'border-primary' : 'border-muted-foreground/30'
-                        }`}>
-                        {paymentMethod === id && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                        )}
-                      </div>
-                    </button>
-                  ))}
+                  ]
+                    .filter(method => !(isTakeaway && method.id === 'cash'))
+                    .map(({ id, icon: Icon, label, sublabel }) => (
+                      <button
+                        key={id}
+                        onClick={() => setPaymentMethod(id)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all border ${paymentMethod === id
+                          ? 'bg-primary/5 border-primary'
+                          : 'bg-background border-border hover:border-primary/50'
+                          }`}
+                      >
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${paymentMethod === id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                          }`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div className="text-left flex-1">
+                          <span className="font-medium text-sm block">{label}</span>
+                          <span className="text-xs text-muted-foreground">{sublabel}</span>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === id ? 'border-primary' : 'border-muted-foreground/30'
+                          }`}>
+                          {paymentMethod === id && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                          )}
+                        </div>
+                      </button>
+                    ))}
                 </div>
               </div>
 
