@@ -141,9 +141,9 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
         restaurant_id: restaurantId,
         total_amount: totalAmount,
         notes: notes || null,
-        // For takeaway + MP: use 'draft' status (deleted if payment abandoned)
-        // For dine-in or cash: use 'pending' (visible to kitchen immediately)
-        status: (isTakeaway && paymentMethod === 'mercadopago') ? 'draft' : 'pending',
+        // For MP: use 'draft' status (deleted if payment abandoned)
+        // For cash: use 'pending' (visible to kitchen immediately)
+        status: paymentMethod === 'mercadopago' ? 'draft' : 'pending',
         payment_status: 'unpaid',
         payment_method: paymentMethod
       }
@@ -217,6 +217,29 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
             .insert(addedExtrasData)
 
           if (extrasError) throw extrasError
+        }
+
+        // Save removed ingredients
+        if (item.removedIngredients && item.removedIngredients.length > 0) {
+          // Get ingredient IDs by name for this menu item
+          const { data: ingredients } = await supabase
+            .from('menu_item_ingredients')
+            .select('id, name')
+            .eq('menu_item_id', item.menuItem.id)
+            .in('name', item.removedIngredients)
+
+          if (ingredients && ingredients.length > 0) {
+            const removedIngredientsData = ingredients.map(ing => ({
+              order_item_id: orderItemId,
+              ingredient_id: ing.id
+            }))
+
+            const { error: ingredientsError } = await supabase
+              .from('order_item_removed_ingredients')
+              .insert(removedIngredientsData)
+
+            if (ingredientsError) throw ingredientsError
+          }
         }
       }
 

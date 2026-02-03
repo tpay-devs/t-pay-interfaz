@@ -27,10 +27,10 @@ const MenuPage = () => {
     }
   }, [categories, activeCategory]);
 
-  // Cleanup abandoned draft orders (takeaway + MP that weren't paid)
+  // Cleanup abandoned draft orders (MP payments that weren't completed)
   useEffect(() => {
     const cleanupDraftOrders = async () => {
-      if (!isTakeaway || !restaurantId) return;
+      if (!restaurantId) return;
 
       const sessionId = getClientSessionId();
       if (!sessionId) return;
@@ -50,7 +50,7 @@ const MenuPage = () => {
     };
 
     cleanupDraftOrders();
-  }, [isTakeaway, restaurantId]);
+  }, [restaurantId]);
 
   // --- 🔥 CAMBIO 1: VALIDACIÓN DE ERROR PRIMERO ---
   // Si ya terminó de cargar el contexto y (hay error O falta el ID), mostramos error.
