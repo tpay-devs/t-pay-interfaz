@@ -49,7 +49,8 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
   const [orderItems, setOrderItems] = useState<OrderItem[]>(() => {
     if (typeof window === 'undefined') return []
     try {
-      const saved = localStorage.getItem(`cart_${restaurantId}`)
+      // Try to load cart - restaurantId might be empty initially for table mode
+      const saved = restaurantId ? localStorage.getItem(`cart_${restaurantId}`) : null
       return saved ? JSON.parse(saved) : []
     } catch (e) {
       console.error('Error loading cart:', e)
@@ -59,6 +60,26 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
   const cartClearedAtRef = useRef<number | null>(null)
+  const hasLoadedCartRef = useRef<string | null>(null)
+
+  // Load cart from localStorage when restaurantId becomes available
+  // This handles the case where restaurantId is initially empty (table mode async lookup)
+  useEffect(() => {
+    if (!restaurantId || hasLoadedCartRef.current === restaurantId) return;
+
+    try {
+      const saved = localStorage.getItem(`cart_${restaurantId}`)
+      if (saved) {
+        const loadedItems = JSON.parse(saved)
+        if (loadedItems.length > 0) {
+          setOrderItems(loadedItems)
+        }
+      }
+      hasLoadedCartRef.current = restaurantId
+    } catch (e) {
+      console.error('Error loading cart on restaurantId change:', e)
+    }
+  }, [restaurantId])
 
   useEffect(() => {
     if (!restaurantId) return;
