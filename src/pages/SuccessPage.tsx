@@ -376,6 +376,16 @@ const SuccessPage = () => {
           >
             {orderIsTakeaway ? pickupCode : orderNumber}
           </motion.p>
+          {orderIsTakeaway && orderNumber && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.9 }}
+              className="text-sm text-muted-foreground mt-2"
+            >
+              Pedido #{orderNumber}
+            </motion.p>
+          )}
         </motion.div>
       </motion.div>
 

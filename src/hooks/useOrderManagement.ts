@@ -141,7 +141,9 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
         restaurant_id: restaurantId,
         total_amount: totalAmount,
         notes: notes || null,
-        status: 'pending',
+        // For takeaway + MP: use 'draft' status (deleted if payment abandoned)
+        // For dine-in or cash: use 'pending' (visible to kitchen immediately)
+        status: (isTakeaway && paymentMethod === 'mercadopago') ? 'draft' : 'pending',
         payment_status: 'unpaid',
         payment_method: paymentMethod
       }
@@ -164,6 +166,7 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
         .neq('status', 'cancelled')
         .neq('status', 'delivered')
         .neq('status', 'completed')
+        .neq('status', 'draft')
         .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
 
       if (countError) throw countError

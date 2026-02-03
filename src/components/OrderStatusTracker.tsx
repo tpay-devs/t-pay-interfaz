@@ -52,6 +52,7 @@ export const OrderStatusTracker = () => {
                 .neq('status', 'cancelled')
                 .neq('status', 'delivered')
                 .neq('status', 'completed')
+                .neq('status', 'draft')
                 .gte('created_at', fifteenMinutesAgo)
                 .order('created_at', { ascending: false });
 

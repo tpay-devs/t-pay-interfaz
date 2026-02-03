@@ -9,9 +9,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useMenuData } from '@/hooks/useSupabaseData';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
+import { getClientSessionId } from '@/utils/clientSession';
 
 const MenuPage = () => {
-  const { restaurantId, isLoading: isContextLoading, error } = useRestaurant();
+  const { restaurantId, isTakeaway, isLoading: isContextLoading, error } = useRestaurant();
 
   // Aseguramos pasar un string vacío si es null para que el hook no falle, 
   // pero la validación de abajo nos protegerá.
@@ -24,6 +26,31 @@ const MenuPage = () => {
       setActiveCategory(categories[0].id);
     }
   }, [categories, activeCategory]);
+
+  // Cleanup abandoned draft orders (takeaway + MP that weren't paid)
+  useEffect(() => {
+    const cleanupDraftOrders = async () => {
+      if (!isTakeaway || !restaurantId) return;
+
+      const sessionId = getClientSessionId();
+      if (!sessionId) return;
+
+      const { data: draftOrders } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('client_session_id', sessionId)
+        .eq('restaurant_id', restaurantId)
+        .eq('status', 'draft');
+
+      if (draftOrders && draftOrders.length > 0) {
+        for (const order of draftOrders) {
+          await supabase.from('orders').delete().eq('id', order.id);
+        }
+      }
+    };
+
+    cleanupDraftOrders();
+  }, [isTakeaway, restaurantId]);
 
   // --- 🔥 CAMBIO 1: VALIDACIÓN DE ERROR PRIMERO ---
   // Si ya terminó de cargar el contexto y (hay error O falta el ID), mostramos error.
@@ -66,10 +93,10 @@ const MenuPage = () => {
     name: item.name,
     description: item.description || "",
     price: item.price,
-    image: item.image_url || "/placeholder.svg", 
+    image: item.image_url || "/placeholder.svg",
     category: item.category_id || "uncategorized",
-    rating: 5.0, 
-    ingredients: [], 
+    rating: 5.0,
+    ingredients: [],
     extras: []
   }));
 

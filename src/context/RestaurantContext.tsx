@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTableData } from '@/hooks/useSupabaseData';
 import { useRestaurantData } from '@/hooks/useRestaurantData';
@@ -6,6 +6,8 @@ import { Tables } from '@/integrations/supabase/types';
 
 type Restaurant = Tables<'restaurants'>;
 type Table = Tables<'tables'>;
+
+const CONTEXT_STORAGE_KEY = 'restaurant_context_id';
 
 interface RestaurantContextType {
   restaurantId: string | null;
@@ -22,7 +24,18 @@ const RestaurantContext = createContext<RestaurantContextType | undefined>(undef
 export const RestaurantProvider = ({ children }: { children: React.ReactNode }) => {
   const [searchParams] = useSearchParams();
 
-  const idParam = searchParams.get("id");
+  // Get ID from URL, or fallback to localStorage for routes like /product/:id
+  const urlIdParam = searchParams.get("id");
+  const storedIdParam = typeof window !== 'undefined' ? localStorage.getItem(CONTEXT_STORAGE_KEY) : null;
+  const idParam = urlIdParam || storedIdParam;
+
+  // Persist valid ID to localStorage when present in URL
+  useEffect(() => {
+    if (urlIdParam && typeof window !== 'undefined') {
+      localStorage.setItem(CONTEXT_STORAGE_KEY, urlIdParam);
+    }
+  }, [urlIdParam]);
+
   const isTakeaway = idParam?.startsWith("rst_") ?? false;
   const isTable = idParam?.startsWith("tbl_") ?? false;
 
