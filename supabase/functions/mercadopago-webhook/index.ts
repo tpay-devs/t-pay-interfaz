@@ -23,7 +23,7 @@ serve(async (req) => {
     const response = new Response('OK', { status: 200 });
 
     if (body.type !== 'payment') return response;
-    
+
     const paymentId = body.data?.id;
     if (!paymentId) return response;
 
@@ -54,12 +54,12 @@ serve(async (req) => {
     }
 
     const paymentData = await mpResponse.json();
-    
+
     const orderId = paymentData.external_reference;
     const status = paymentData.status; // 'approved', 'rejected', etc.
     const paymentMethod = paymentData.payment_method_id;
     const payerEmail = paymentData.payer?.email || paymentData.additional_info?.payer?.email;
-    const payerName = paymentData.payer?.first_name 
+    const payerName = paymentData.payer?.first_name
       ? `${paymentData.payer.first_name} ${paymentData.payer.last_name || ''}`.trim()
       : null;
 
@@ -77,13 +77,12 @@ serve(async (req) => {
       // Si fue APROBADO
       if (status === 'approved') {
         updateData.payment_status = 'paid';
-        updateData.status = 'paid'; // Movemos el flujo
-      } 
-      // Si fue RECHAZADO (Nuevo!)
+        // status stays 'pending' — kitchen picks it up from the kanban
+      }
+      // Si fue RECHAZADO
       else if (status === 'rejected' || status === 'cancelled') {
-        updateData.payment_status = 'rejected';
-        // No cambiamos el 'status' principal (lo dejamos en pending) para que la cocina no lo vea aún,
-        // pero sabemos que el pago falló.
+        updateData.payment_status = 'unpaid';
+        // Keep as unpaid so the user can retry payment
       }
 
       const { error: updateError } = await supabase

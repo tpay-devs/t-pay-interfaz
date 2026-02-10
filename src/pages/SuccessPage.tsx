@@ -127,7 +127,7 @@ const SuccessPage = () => {
           query = query
             .eq('client_session_id', sessionId)
             .gte('created_at', fifteenMinutesAgo)
-            .in('payment_status', ['paid', 'pending', 'rejected'])
+            .in('payment_status', ['paid', 'pending', 'unpaid'])
             .order('created_at', { ascending: false })
             .limit(1);
         }

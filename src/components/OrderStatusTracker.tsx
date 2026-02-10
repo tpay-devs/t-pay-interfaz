@@ -52,7 +52,6 @@ export const OrderStatusTracker = () => {
                 .neq('status', 'cancelled')
                 .neq('status', 'delivered')
                 .neq('status', 'completed')
-                .neq('status', 'draft')
                 .gte('created_at', fifteenMinutesAgo)
                 .order('created_at', { ascending: false });
 
@@ -146,7 +145,7 @@ export const OrderStatusTracker = () => {
                         {activeOrders.map((order) => {
 
                             const isUnpaidMP =
-                                (order.payment_status === 'unpaid' || order.payment_status === 'rejected') &&
+                                order.payment_status === 'unpaid' &&
                                 order.payment_method === 'mercadopago' &&
                                 order.mercadopago_preference_id;
 

@@ -162,9 +162,9 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
         restaurant_id: restaurantId,
         total_amount: totalAmount,
         notes: notes || null,
-        // For MP: use 'draft' status (deleted if payment abandoned)
-        // For cash: use 'pending' (visible to kitchen immediately)
-        status: paymentMethod === 'mercadopago' ? 'draft' : 'pending',
+        // All orders start as 'pending' — valid constraint value
+        // MP orders are identified by payment_method + payment_status for filtering
+        status: 'pending',
         payment_status: 'unpaid',
         payment_method: paymentMethod
       }
@@ -187,7 +187,6 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
         .neq('status', 'cancelled')
         .neq('status', 'delivered')
         .neq('status', 'completed')
-        .neq('status', 'draft')
         .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
 
       if (countError) throw countError
@@ -281,8 +280,14 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
           });
 
           if (mpError) {
-            console.error("❌ MercadoPago Function Error:", mpError);
-            throw new Error("No se pudo conectar con el servicio de pagos.");
+            // Extract actual error message from edge function response
+            let errorDetail = mpError.message;
+            try {
+              const errorContext = await mpError.context?.json?.();
+              errorDetail = errorContext?.error || errorDetail;
+            } catch { /* ignore parsing errors */ }
+            console.error("❌ MercadoPago Function Error:", errorDetail, mpError);
+            throw new Error(errorDetail || "No se pudo conectar con el servicio de pagos.");
           }
 
           if (!mpData?.checkout_url) {

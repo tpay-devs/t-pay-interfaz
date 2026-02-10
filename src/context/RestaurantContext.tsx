@@ -27,7 +27,11 @@ export const RestaurantProvider = ({ children }: { children: React.ReactNode }) 
   // Get ID from URL, or fallback to localStorage for routes like /product/:id
   const urlIdParam = searchParams.get("id");
   const storedIdParam = typeof window !== 'undefined' ? localStorage.getItem(CONTEXT_STORAGE_KEY) : null;
-  const idParam = urlIdParam || storedIdParam;
+  // Only use localStorage fallback on sub-routes (/product, /checkout, /success)
+  // NOT on root "/" — if someone lands on "/" without params, they should see an error
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
+  const isSubRoute = pathname !== '/';
+  const idParam = urlIdParam || (isSubRoute ? storedIdParam : null);
 
   // Persist valid ID to localStorage when present in URL
   useEffect(() => {

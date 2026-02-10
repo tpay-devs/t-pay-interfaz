@@ -172,8 +172,9 @@ serve(async (req) => {
     const mpData = await mpResponse.json();
 
     if (!mpResponse.ok) {
-      console.error('MercadoPago error:', mpData);
-      throw new Error('Failed to create preference: ' + (mpData.message || 'Unknown error'));
+      console.error('MercadoPago error:', JSON.stringify(mpData));
+      const errorMsg = mpData.message || mpData.error || JSON.stringify(mpData);
+      throw new Error('Failed to create preference: ' + errorMsg);
     }
 
     // Update restaurant info if needed (Collector ID check)

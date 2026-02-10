@@ -35,12 +35,16 @@ const MenuPage = () => {
       const sessionId = getClientSessionId();
       if (!sessionId) return;
 
+      // Find abandoned MP orders: pending + unpaid + mercadopago + recent (< 5 min)
       const { data: draftOrders } = await supabase
         .from('orders')
         .select('id')
         .eq('client_session_id', sessionId)
         .eq('restaurant_id', restaurantId)
-        .eq('status', 'draft');
+        .eq('status', 'pending')
+        .eq('payment_status', 'unpaid')
+        .eq('payment_method', 'mercadopago')
+        .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString());
 
       if (draftOrders && draftOrders.length > 0) {
         for (const order of draftOrders) {
