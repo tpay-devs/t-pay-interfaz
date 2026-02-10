@@ -313,9 +313,10 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
         }
       }
 
-      if (clearCart && !checkoutUrl) {
+      // Always clear cart after order creation — the order is in the DB now.
+      // For MP retries, the user can use the "Pagar ahora" button in OrderStatusTracker.
+      if (clearCart) {
         setOrderItems([]);
-        // Immediately sync to localStorage to avoid race condition with navigation
         localStorage.setItem(`cart_${restaurantId}`, JSON.stringify([]));
         cartClearedAtRef.current = Date.now();
       }

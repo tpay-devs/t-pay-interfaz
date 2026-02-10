@@ -19,13 +19,25 @@ const MenuPage = () => {
   // pero la validación de abajo nos protegerá.
   const { categories, menuItems, loading: isMenuLoading } = useMenuData(restaurantId || "");
 
-  const [activeCategory, setActiveCategory] = useState('');
+  const categoryStorageKey = restaurantId ? `active_category_${restaurantId}` : null;
+
+  const [activeCategory, setActiveCategory] = useState(() => {
+    if (typeof window === 'undefined' || !categoryStorageKey) return '';
+    return localStorage.getItem(categoryStorageKey) || '';
+  });
 
   useEffect(() => {
     if (categories.length > 0 && !activeCategory) {
       setActiveCategory(categories[0].id);
     }
   }, [categories, activeCategory]);
+
+  // Persist active category to localStorage
+  useEffect(() => {
+    if (activeCategory && categoryStorageKey) {
+      localStorage.setItem(categoryStorageKey, activeCategory);
+    }
+  }, [activeCategory, categoryStorageKey]);
 
   // Cleanup abandoned draft orders (MP payments that weren't completed)
   useEffect(() => {

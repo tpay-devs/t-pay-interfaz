@@ -92,7 +92,7 @@ const ProductDetailPage = () => {
     );
   };
 
-    const toggleExtra = (extra: UIExtra) => {
+  const toggleExtra = (extra: UIExtra) => {
     setSelectedExtras((prev) =>
       prev.some((e) => e.id === extra.id)
         ? prev.filter((e) => e.id !== extra.id)
@@ -114,7 +114,7 @@ const ProductDetailPage = () => {
       price: product.price,
       quantity,
       image: product.image_url || "/placeholder.svg",
-      extras: selectedExtras, 
+      extras: selectedExtras,
       removedIngredients,
     });
 
@@ -149,7 +149,7 @@ const ProductDetailPage = () => {
           transition={{ delay: 0.2 }}
           whileTap={{ scale: 0.9 }}
           onClick={handleBack}
-          className="absolute top-4 left-4 z-10 w-11 h-11 glass rounded-full flex items-center justify-center shadow-lg bg-white/20 backdrop-blur-sm text-white"
+          className="absolute top-4 left-4 z-10 w-11 h-11 rounded-full flex items-center justify-center shadow-lg bg-white/80 backdrop-blur-sm text-black"
         >
           <ArrowLeft className="w-5 h-5" />
         </motion.button>
