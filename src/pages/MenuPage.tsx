@@ -13,10 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { getClientSessionId } from '@/utils/clientSession';
 
 const MenuPage = () => {
-  const { restaurantId, isTakeaway, isLoading: isContextLoading, error } = useRestaurant();
+  const { restaurantId, restaurant, isTakeaway, isLoading: isContextLoading, error } = useRestaurant();
 
-  // Aseguramos pasar un string vacío si es null para que el hook no falle, 
-  // pero la validación de abajo nos protegerá.
   const { categories, menuItems, loading: isMenuLoading } = useMenuData(restaurantId || "");
 
   const categoryStorageKey = restaurantId ? `active_category_${restaurantId}` : null;
@@ -32,7 +30,6 @@ const MenuPage = () => {
     }
   }, [categories, activeCategory]);
 
-  // Persist active category to localStorage
   useEffect(() => {
     if (activeCategory && categoryStorageKey) {
       localStorage.setItem(categoryStorageKey, activeCategory);
@@ -47,7 +44,7 @@ const MenuPage = () => {
       const sessionId = getClientSessionId();
       if (!sessionId) return;
 
-      // Find abandoned MP orders: pending + unpaid + mercadopago + recent (< 5 min)
+      // Clean up abandoned MP orders (pending + unpaid + recent)
       const { data: draftOrders } = await supabase
         .from('orders')
         .select('id')
@@ -123,6 +120,7 @@ const MenuPage = () => {
     return cat ? cat.name : 'Menú';
   };
 
+
   return (
     <div className="min-h-screen bg-background pb-28">
       {/* Hero Section */}
@@ -132,7 +130,7 @@ const MenuPage = () => {
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.8 }}
-          src={"/hero-burger.jpg"}
+          src={restaurant?.cover_image_url || "/hero-burger.jpg"}
           alt="Hero"
           className="w-full h-full object-cover"
         />

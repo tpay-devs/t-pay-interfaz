@@ -26,7 +26,6 @@ export const useOperationMode = (restaurantId: string) => {
         } else {
           const mode = data?.operation_mode || 'order_and_pay';
           setOperationMode(mode);
-          console.log(`[Operation Mode] Loaded: ${mode} for restaurant ${restaurantId}`);
         }
       } catch (err) {
         console.error('Error in fetchOperationMode:', err);
@@ -50,7 +49,6 @@ export const useOperationMode = (restaurantId: string) => {
         },
         (payload) => {
           const newMode = payload.new.operation_mode || 'order_and_pay';
-          console.log(`[Operation Mode] Updated: ${operationMode} → ${newMode}`);
           setOperationMode(newMode);
         }
       )

@@ -25,12 +25,6 @@ export const useWaitingTime = (restaurantId: string): WaitingTimeData => {
       if (!restaurantId) return
 
       try {
-        const { data, error } = await supabase.rpc('get_restaurant_public_info', {
-          restaurant_id_param: restaurantId
-        })
-
-        if (error) throw error
-
         const { data: waitingData, error: waitingError } = await supabase
           .from('restaurant_waiting_status' as any)
           .select('*')
@@ -38,7 +32,6 @@ export const useWaitingTime = (restaurantId: string): WaitingTimeData => {
           .maybeSingle()
 
         if (waitingError) {
-          console.log('No waiting time data available')
           setWaitingStatus(null)
         } else {
           setWaitingStatus(waitingData ? waitingData as unknown as WaitingStatus : null)

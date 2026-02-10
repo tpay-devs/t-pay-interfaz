@@ -18,12 +18,12 @@ export const usePaymentSuccess = (tableId: string | null, isTakeaway: boolean = 
 
   useEffect(() => {
     if (disabled) return;
-    
+
     if (!isTakeaway && !tableId) return;
     if (isTakeaway && !restaurantId) return;
 
     const currentSessionId = clientSessionIdRef.current;
-    
+
     if (!currentSessionId) {
       console.error('usePaymentSuccess: No client session ID available, skipping subscription');
       return;
@@ -44,17 +44,17 @@ export const usePaymentSuccess = (tableId: string | null, isTakeaway: boolean = 
         if (!order.client_session_id) {
           return;
         }
-        
+
         if (order.client_session_id !== currentSessionId) {
-          return;   
+          return;
         }
-        
+
         if (
           order.payment_status === 'paid' &&
           new Date(order.updated_at) >= new Date(pageLoadTimeRef.current)
         ) {
           const lastShown = localStorage.getItem(`payment_success_shown_${order.id}`);
-          
+
           if (!lastShown) {
             const { data: orderData, error } = await supabase
               .from('orders')
@@ -100,17 +100,17 @@ export const usePaymentSuccess = (tableId: string | null, isTakeaway: boolean = 
     const checkExistingPaidOrders = async () => {
       try {
         const minUpdatedAtISO = pageLoadTimeRef.current;
-        
+
         let query = supabase
           .from('orders')
           .select('id, order_number, total_amount, payment_status, updated_at, pickup_code, pickup_time, client_session_id')
           .eq('payment_status', 'paid')
-          .eq('client_session_id', currentSessionId) 
+          .eq('client_session_id', currentSessionId)
           .not('client_session_id', 'is', null)
           .gte('updated_at', minUpdatedAtISO)
           .order('updated_at', { ascending: false })
           .limit(1);
-        
+
         if (isTakeaway && restaurantId) {
           query = query.is('table_id', null).eq('restaurant_id', restaurantId);
         } else if (tableId) {
@@ -118,7 +118,7 @@ export const usePaymentSuccess = (tableId: string | null, isTakeaway: boolean = 
         } else {
           return;
         }
-        
+
         const { data: orders, error } = await query;
 
         if (error) {
@@ -128,14 +128,13 @@ export const usePaymentSuccess = (tableId: string | null, isTakeaway: boolean = 
 
         if (orders && orders.length > 0) {
           const order = orders[0];
-          
+
           if (order.client_session_id !== currentSessionId) {
-            console.warn('checkExistingPaidOrders: Order session ID mismatch, ignoring');
             return;
           }
-          
+
           const lastShown = localStorage.getItem(`payment_success_shown_${order.id}`);
-          
+
           if (!lastShown) {
             setPaymentSuccess({
               orderNumber: order.order_number,

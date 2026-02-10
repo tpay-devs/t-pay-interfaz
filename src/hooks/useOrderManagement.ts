@@ -267,7 +267,6 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
 
       if (createPayment && paymentMethod === 'mercadopago') {
         try {
-          console.log("💳 Initiating MercadoPago Preference...");
 
           // Include session ID in return URL so we can restore it after payment redirect
           const returnUrlWithSession = `${window.location.origin}/success?sid=${sessionId}`;
@@ -295,7 +294,6 @@ export const useOrderManagement = (tableId: string | null, restaurantId: string,
             throw new Error("La respuesta del pago fue inválida.");
           }
 
-          console.log("✅ Payment Link Created:", mpData.checkout_url);
           checkoutUrl = mpData.checkout_url;
 
 
