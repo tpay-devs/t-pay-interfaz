@@ -111,4 +111,3 @@ Este repositorio incluye parches de seguridad críticos aplicados recientemente:
 
 ---
 
-**Desarrollado con Lovable y Supabase.**
