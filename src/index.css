@@ -1,0 +1,229 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 20% 14%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 14%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 14%;
+
+    --primary: 220 25% 15%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 45 100% 51%;
+    --secondary-foreground: 220 25% 15%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 220 14% 96%;
+    --accent-foreground: 220 25% 15%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 220 25% 15%;
+
+    --radius: 1rem;
+
+    /* Custom tokens */
+    --badge-hot: 45 100% 51%;
+    --badge-hot-foreground: 220 25% 15%;
+    --badge-discount: 0 84% 60%;
+    --badge-discount-foreground: 0 0% 100%;
+    --badge-popular: 45 100% 90%;
+    --badge-popular-foreground: 30 80% 35%;
+    
+    --overlay: 220 20% 14%;
+    
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 20% 10%;
+    --foreground: 0 0% 98%;
+
+    --card: 220 20% 14%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 20% 14%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 0 0% 98%;
+    --primary-foreground: 220 25% 15%;
+
+    --secondary: 45 100% 51%;
+    --secondary-foreground: 220 25% 15%;
+
+    --muted: 220 20% 20%;
+    --muted-foreground: 220 10% 65%;
+
+    --accent: 220 20% 20%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 0 0% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased text-sm;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+
+  h1 {
+    @apply text-xl font-bold;
+  }
+
+  h2 {
+    @apply text-base font-semibold;
+  }
+
+  h3 {
+    @apply text-sm font-semibold;
+  }
+
+  p, span, label {
+    @apply text-sm;
+    line-height: 1.5;
+  }
+
+  .text-display {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Custom animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted-foreground) / 0.1) 50%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 1s ease-in-out infinite;
+}
+
+/* Smooth touch feedback */
+.touch-feedback {
+  @apply transition-all duration-150 active:scale-[0.97] active:opacity-90;
+}
+
+/* Glass effect */
+.glass {
+  @apply bg-card/80 backdrop-blur-md;
+}
+
+/* Gradient overlays */
+.gradient-fade-up {
+  background: linear-gradient(to top, hsl(var(--background)) 0%, transparent 100%);
+}
+
+.gradient-fade-down {
+  background: linear-gradient(to bottom, hsl(var(--background) / 0.8) 0%, transparent 100%);
+}
