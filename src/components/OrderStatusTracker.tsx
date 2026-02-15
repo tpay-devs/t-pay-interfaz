@@ -74,8 +74,21 @@ export const OrderStatusTracker = () => {
 
         fetchActiveOrders();
 
-        const interval = setInterval(fetchActiveOrders, 30000);
-        return () => clearInterval(interval);
+        // Polling cada 15s para actualizaciones de estado
+        const interval = setInterval(fetchActiveOrders, 15000);
+
+        // Fetch inmediato cuando el usuario vuelve a la pestaña (ej: volviendo de Mercado Pago)
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchActiveOrders();
+            }
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
     }, [restaurantId]);
 
     if (activeOrders.length === 0) return null;
