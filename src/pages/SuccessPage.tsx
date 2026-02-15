@@ -6,6 +6,7 @@ import { useRestaurant } from '@/context/RestaurantContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/context/CartContext';
 import { getClientSessionId } from '@/utils/clientSession';
+import { useToast } from '@/hooks/use-toast';
 
 interface OrderItem {
   name: string;
@@ -34,6 +35,7 @@ const SuccessPage = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { clearCart } = useCart();
+  const { toast } = useToast();
 
   // Restore session ID from URL params on mount (handles iOS Safari localStorage reset)
   useEffect(() => {
@@ -89,6 +91,12 @@ const SuccessPage = () => {
     const prefId = fetchedOrder?.mercadopagoPreferenceId || navState?.mercadopagoPreferenceId;
     if (prefId) {
       window.location.href = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${prefId}`;
+    } else {
+      toast({
+        title: "Sesión expirada",
+        description: "Tu sesión de pago expiró. Volvé al menú para hacer un nuevo pedido.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -185,6 +193,26 @@ const SuccessPage = () => {
 
   const activeData = navState || fetchedOrder;
 
+  // Back button interception para la página de pago pendiente
+  // Se coloca aquí (top-level) para cumplir con las reglas de hooks de React
+  useEffect(() => {
+    if (isLoading || !activeData) return;
+
+    // Solo activar para el caso de pago pendiente
+    const mpStatus = searchParams.get('collection_status') || searchParams.get('status');
+    const isApproved = activeData.paymentStatus === 'paid' || mpStatus === 'approved';
+    if (isApproved || activeData.paymentStatus == null) return;
+
+    // Pushear estado al historial para que el botón atrás dispare popstate
+    window.history.pushState({ pendingPayment: true }, '');
+
+    const onBackButton = () => handleReturn();
+
+    window.addEventListener('popstate', onBackButton);
+    return () => window.removeEventListener('popstate', onBackButton);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, activeData, searchParams]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -231,7 +259,7 @@ const SuccessPage = () => {
   if (!isPaymentCompleted && activeData.paymentStatus != null) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        <main className="flex-grow flex flex-col px-6 pt-6 pb-10 max-w-md mx-auto w-full">
+        <main className="flex-grow flex flex-col px-6 pt-6 pb-10">
           {/* Status Header */}
           <section className="flex flex-col items-center text-center mt-6 mb-8">
             <div className="relative mb-6">
