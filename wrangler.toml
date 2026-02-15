@@ -1,8 +1,11 @@
 name = "t-pay-interfaz"
 compatibility_date = "2026-02-11"
+main = "worker/index.ts"
 
 [assets]
 directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
 
 [[routes]]
 pattern = "customer.tpaydigital.com/*"
