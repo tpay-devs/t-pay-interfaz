@@ -233,7 +233,7 @@ const SuccessPage = () => {
           <p className="text-muted-foreground mb-6">
             Si pagaste, espera unos instantes y revisa tu correo.
           </p>
-          <button onClick={() => window.location.href = '/'} className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-semibold shadow-lg">
+          <button onClick={handleReturn} className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-semibold shadow-lg">
             Volver al inicio
           </button>
         </div>
