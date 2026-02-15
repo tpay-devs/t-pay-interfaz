@@ -172,6 +172,11 @@ export const OrderStatusTracker = () => {
                                             <p className="text-2xl font-bold tracking-tight">
                                                 {order.pickup_code || order.order_number}
                                             </p>
+                                            {order.pickup_code && (
+                                                <p className="text-xs text-muted-foreground mt-0.5">
+                                                    Pedido #{order.order_number}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold ${order.status === 'ready' ? 'bg-green-100 text-green-700' :
                                             order.status === 'preparing' ? 'bg-amber-100 text-amber-700' :
