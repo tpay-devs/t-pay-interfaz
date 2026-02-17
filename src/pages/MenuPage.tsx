@@ -9,8 +9,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useMenuData } from '@/hooks/useSupabaseData';
 import { Skeleton } from '@/components/ui/skeleton';
-import { supabase } from '@/integrations/supabase/client';
-import { getClientSessionId } from '@/utils/clientSession';
 
 const MenuPage = () => {
   const { restaurantId, restaurant, isTakeaway, isLoading: isContextLoading, error } = useRestaurant();
@@ -36,34 +34,6 @@ const MenuPage = () => {
     }
   }, [activeCategory, categoryStorageKey]);
 
-  // Cleanup abandoned draft orders (MP payments that weren't completed)
-  useEffect(() => {
-    const cleanupDraftOrders = async () => {
-      if (!restaurantId) return;
-
-      const sessionId = getClientSessionId();
-      if (!sessionId) return;
-
-      // Clean up abandoned MP orders (pending + unpaid + recent)
-      const { data: draftOrders } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('client_session_id', sessionId)
-        .eq('restaurant_id', restaurantId)
-        .eq('status', 'pending')
-        .eq('payment_status', 'unpaid')
-        .eq('payment_method', 'mercadopago')
-        .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString());
-
-      if (draftOrders && draftOrders.length > 0) {
-        for (const order of draftOrders) {
-          await supabase.from('orders').delete().eq('id', order.id);
-        }
-      }
-    };
-
-    cleanupDraftOrders();
-  }, [restaurantId]);
 
   // --- 🔥 CAMBIO 1: VALIDACIÓN DE ERROR PRIMERO ---
   // Si ya terminó de cargar el contexto y (hay error O falta el ID), mostramos error.
