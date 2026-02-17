@@ -158,7 +158,7 @@ export const OrderStatusTracker = () => {
                         {activeOrders.map((order) => {
 
                             const isUnpaidMP =
-                                order.payment_status === 'unpaid' &&
+                                (order.payment_status === 'unpaid' || order.payment_status === 'pending') &&
                                 order.payment_method === 'mercadopago' &&
                                 order.mercadopago_preference_id;
 
