@@ -32,7 +32,7 @@ serve(async (req) => {
     // 1. Find Restaurant
     const { data: restaurants, error: rError } = await supabase
       .from('restaurants')
-      .select('id, mercadopago_access_token')
+      .select('id, name, logo_url, cover_image_url, primary_color, mercadopago_sandbox_mode, mercadopago_access_token')
       .eq('mercadopago_user_id', body.user_id?.toString() || '');
 
     if (rError || !restaurants?.length) {
@@ -66,6 +66,17 @@ serve(async (req) => {
     console.log(`✅ Payment ${paymentId} for Order ${orderId} is: ${status}`);
 
     if (orderId) {
+      const { data: currentOrder, error: currentOrderError } = await supabase
+        .from('orders')
+        .select('id, restaurant_id, table_id, pickup_code, order_number, total_amount, payment_status')
+        .eq('id', orderId)
+        .single();
+
+      if (currentOrderError || !currentOrder) {
+        console.error('❌ Order not found:', orderId, currentOrderError);
+        return response;
+      }
+
       // 3. Update Database based on Status
       const updateData: any = {
         mercadopago_payment_id: paymentId.toString(),
@@ -85,15 +96,60 @@ serve(async (req) => {
         // Keep as unpaid so the user can retry payment
       }
 
-      const { error: updateError } = await supabase
+      const updateQuery = supabase
         .from('orders')
         .update(updateData)
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .neq('payment_status', 'paid')
+        .select('id, table_id, pickup_code, order_number, total_amount, payment_status')
+        .maybeSingle();
+
+      const { data: updatedOrder, error: updateError } = await updateQuery;
 
       if (updateError) {
         console.error('❌ Database Update Failed:', updateError);
       } else {
         console.log(`🎉 Database updated: Order ${orderId} is now ${status}`);
+
+        if (status === 'approved' && updatedOrder?.payment_status === 'paid' && payerEmail) {
+          try {
+            const isTakeaway = !updatedOrder.table_id;
+            const pickupCode = updatedOrder.pickup_code || null;
+            const emailRecipient = restaurant.mercadopago_sandbox_mode
+              ? 'simonabelleyra@gmail.com'
+              : payerEmail;
+
+            console.log(`📧 Sending confirmation email to ${emailRecipient} for order ${updatedOrder.order_number}`);
+
+            const emailResponse = await supabase.functions.invoke('send-order-confirmation', {
+              body: {
+                orderId: updatedOrder.id,
+                orderNumber: updatedOrder.order_number || 0,
+                totalAmount: updatedOrder.total_amount,
+                payerEmail: emailRecipient,
+                payerName: payerName,
+                restaurantName: restaurant.name || 'Restaurant',
+                restaurantLogo: restaurant.logo_url,
+                coverImageUrl: restaurant.cover_image_url,
+                primaryColor: restaurant.primary_color || '#059669',
+                isTestEmail: restaurant.mercadopago_sandbox_mode,
+                originalCustomerEmail: restaurant.mercadopago_sandbox_mode ? payerEmail : undefined,
+                pickupCode: isTakeaway ? pickupCode : null,
+                isTakeaway
+              }
+            });
+
+            if (emailResponse.error) {
+              console.error('❌ Failed to send confirmation email:', emailResponse.error);
+            } else {
+              console.log('✅ Confirmation email sent successfully');
+            }
+          } catch (emailError) {
+            console.error('❌ Error sending confirmation email:', emailError);
+          }
+        } else if (status === 'approved' && !payerEmail) {
+          console.log(`ℹ️ Skipping confirmation email for order ${orderId}: payer email missing`);
+        }
       }
     }
 
