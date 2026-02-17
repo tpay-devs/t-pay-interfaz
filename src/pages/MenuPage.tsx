@@ -8,12 +8,19 @@ import { OrderStatusTracker } from "@/components/OrderStatusTracker";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { useMenuData } from '@/hooks/useSupabaseData';
+import { useTakeawaySchedule } from '@/hooks/useTakeawaySchedule';
+import RestaurantClosedScreen from '@/components/RestaurantClosedScreen';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const MenuPage = () => {
   const { restaurantId, restaurant, isTakeaway, isLoading: isContextLoading, error } = useRestaurant();
+  const restaurantTimezone = (restaurant as any)?.timezone || 'America/Buenos_Aires';
 
   const { categories, menuItems, loading: isMenuLoading } = useMenuData(restaurantId || "");
+  const { scheduleStatus, loading: scheduleLoading } = useTakeawaySchedule(
+    isTakeaway ? restaurantId || "" : "",
+    restaurantTimezone
+  );
 
   const categoryStorageKey = restaurantId ? `active_category_${restaurantId}` : null;
 
@@ -59,7 +66,7 @@ const MenuPage = () => {
 
   // --- 🔥 CAMBIO 2: SKELETONS DESPUÉS ---
   // Solo mostramos carga si tenemos un ID válido y estamos esperando datos.
-  if (isContextLoading || isMenuLoading) {
+  if (isContextLoading || isMenuLoading || (isTakeaway && scheduleLoading)) {
     return (
       <div className="min-h-screen bg-background p-4 space-y-8">
         <Skeleton className="h-72 w-full rounded-b-3xl" />
@@ -68,6 +75,19 @@ const MenuPage = () => {
           <Skeleton className="h-4 w-1/2" />
         </div>
       </div>
+    );
+  }
+
+  // Block takeaway orders when restaurant is closed according to configured schedule.
+  if (isTakeaway && restaurant && !scheduleStatus.isOpen) {
+    return (
+      <RestaurantClosedScreen
+        restaurantName={restaurant.name}
+        schedule={scheduleStatus.weeklySchedule}
+        nextOpenTime={scheduleStatus.nextOpenTime}
+        closureReason={scheduleStatus.closureReason}
+        primaryColor={restaurant.primary_color || "#ea580c"}
+      />
     );
   }
 
