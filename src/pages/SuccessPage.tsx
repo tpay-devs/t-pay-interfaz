@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { X, Check, Utensils, PartyPopper, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Check, Utensils, PartyPopper, Loader2, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/context/CartContext';
 import { getClientSessionId } from '@/utils/clientSession';
+import { useToast } from '@/hooks/use-toast';
 
 interface OrderItem {
   name: string;
@@ -34,6 +35,7 @@ const SuccessPage = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { clearCart } = useCart();
+  const { toast } = useToast();
 
   // Restore session ID from URL params on mount (handles iOS Safari localStorage reset)
   useEffect(() => {
@@ -89,6 +91,12 @@ const SuccessPage = () => {
     const prefId = fetchedOrder?.mercadopagoPreferenceId || navState?.mercadopagoPreferenceId;
     if (prefId) {
       window.location.href = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${prefId}`;
+    } else {
+      toast({
+        title: "Sesión expirada",
+        description: "Tu sesión de pago expiró. Volvé al menú para hacer un nuevo pedido.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -185,6 +193,26 @@ const SuccessPage = () => {
 
   const activeData = navState || fetchedOrder;
 
+  // Back button interception para la página de pago pendiente
+  // Se coloca aquí (top-level) para cumplir con las reglas de hooks de React
+  useEffect(() => {
+    if (isLoading || !activeData) return;
+
+    // Solo activar para el caso de pago pendiente
+    const mpStatus = searchParams.get('collection_status') || searchParams.get('status');
+    const isApproved = activeData.paymentStatus === 'paid' || mpStatus === 'approved';
+    if (isApproved || activeData.paymentStatus == null) return;
+
+    // Pushear estado al historial para que el botón atrás dispare popstate
+    window.history.pushState({ pendingPayment: true }, '');
+
+    const onBackButton = () => handleReturn();
+
+    window.addEventListener('popstate', onBackButton);
+    return () => window.removeEventListener('popstate', onBackButton);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, activeData, searchParams]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -205,7 +233,7 @@ const SuccessPage = () => {
           <p className="text-muted-foreground mb-6">
             Si pagaste, espera unos instantes y revisa tu correo.
           </p>
-          <button onClick={() => window.location.href = '/'} className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-semibold shadow-lg">
+          <button onClick={handleReturn} className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-semibold shadow-lg">
             Volver al inicio
           </button>
         </div>
@@ -213,47 +241,114 @@ const SuccessPage = () => {
     );
   }
 
-  // CASO 2: PAGO RECHAZADO
-  if (activeData.paymentStatus === 'rejected') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="w-24 h-24 rounded-full bg-red-100 flex items-center justify-center mb-6"
-        >
-          <X className="w-12 h-12 text-red-600" />
-        </motion.div>
-        <h1 className="text-2xl font-bold mb-2 text-destructive">Pago Rechazado</h1>
-        <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
-          Hubo un problema con tu tarjeta.
-        </p>
-
-        <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
-          <button
-            onClick={handleRetryPayment}
-            className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
-          >
-            <RefreshCw className="w-4 h-4" /> Reintentar Pago
-          </button>
-          <button
-            onClick={handleReturn}
-            className="w-full py-4 rounded-xl font-medium text-muted-foreground hover:bg-muted transition-colors"
-          >
-            Volver al menú
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // CASO 3: ÉXITO
+  // Desestructurar datos del pedido y utilidad de formateo
   const { orderNumber, items, subtotal, tipAmount, total, tipPercentage, isTakeaway: orderIsTakeaway, pickupCode, tableId } = activeData;
 
   const formatPrice = (price: number) => {
     return `$${price.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
   };
 
+  // Determinar si el pago fue completado
+  // Checkeamos tanto el estado en la DB como el parámetro de URL de Mercado Pago
+  // para manejar el caso donde el webhook aún no procesó pero MP ya aprobó
+  const mpStatus = searchParams.get('collection_status') || searchParams.get('status');
+  const isApprovedByMP = mpStatus === 'approved';
+  const isPaymentCompleted = activeData.paymentStatus === 'paid' || isApprovedByMP;
+
+  // CASO 2: PAGO NO COMPLETADO (rechazado, pendiente, o abandonado)
+  if (!isPaymentCompleted && activeData.paymentStatus != null) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background">
+        <main className="flex-grow flex flex-col px-6 pt-6 pb-10">
+          {/* Status Header */}
+          <section className="flex flex-col items-center text-center mt-6 mb-8">
+            <div className="relative mb-6">
+              <div className="bg-[#f59e0b] rounded-full flex items-center justify-center shadow-[0_15px_30px_-5px_rgba(245,158,11,0.3)] w-32 h-32">
+                <svg className="text-white h-16 w-16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+            <h1 className="text-2xl font-bold mt-6 mb-2 tracking-tight text-[#111827]">¡Pago Pendiente!</h1>
+            <div className="bg-[#f3f4f6] px-4 py-2 rounded-full inline-flex items-center gap-2 mb-8">
+              <svg className="h-5 w-5 text-[#6b7280]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+              </svg>
+              <span className="text-[#6b7280] text-sm font-medium">
+                {orderIsTakeaway ? 'Para llevar' : 'En Mesa'} • Pendiente de Pago
+              </span>
+            </div>
+            <p className="text-[#6b7280] text-sm leading-relaxed mx-auto max-w-[320px]">
+              Tu pedido no fue pagado. Hasta que no pagues tu orden, el comercio no recibirá tu pedido.
+            </p>
+          </section>
+
+          <hr className="border-[#f3f4f6] border-dashed mb-10" />
+
+          {/* Order Summary */}
+          <section className="space-y-6 mb-12">
+            {items.map((item, index) => {
+              const extrasTotal = item.extras?.reduce((sum, e) => sum + e.price, 0) || 0;
+              const itemTotal = (item.price + extrasTotal) * item.quantity;
+              return (
+                <div key={index} className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-[#111827]">{item.quantity}x {item.name}</span>
+                  <span className="text-sm font-medium text-[#111827]">{formatPrice(itemTotal)}</span>
+                </div>
+              );
+            })}
+            <div className="pt-2 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-[#6b7280] text-sm">Subtotal</span>
+                <span className="text-[#6b7280] text-sm">{formatPrice(subtotal)}</span>
+              </div>
+              {tipAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-[#6b7280] text-sm">Propina ({tipPercentage}%)</span>
+                  <span className="text-[#6b7280] text-sm">{formatPrice(tipAmount)}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between items-center pt-4">
+              <span className="text-sm font-semibold text-[#111827]">Total</span>
+              <span className="text-2xl font-bold text-[#111827]">{formatPrice(total)}</span>
+            </div>
+          </section>
+
+          {/* Order Number / Pickup Code */}
+          <section className="bg-[#f3f4f6] rounded-[32px] p-10 flex flex-col items-center justify-center mb-12">
+            <p className="text-[#6b7280] text-xs font-bold uppercase tracking-widest mb-2">
+              {orderIsTakeaway ? 'CÓDIGO DE RETIRO' : 'TU NÚMERO DE ORDEN'}
+            </p>
+            <p className="text-4xl font-bold text-[#111827] leading-none break-all">
+              {orderIsTakeaway ? pickupCode : orderNumber}
+            </p>
+          </section>
+
+          {/* Actions */}
+          <section className="mt-auto space-y-4">
+            <button
+              onClick={handleRetryPayment}
+              className="w-full bg-primary text-primary-foreground font-semibold py-4 rounded-2xl text-sm transition-colors duration-200 flex items-center justify-center gap-3"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
+              </svg>
+              Pagar ahora
+            </button>
+            <button
+              onClick={handleReturn}
+              className="w-full bg-[#111827] text-white font-semibold py-4 rounded-2xl text-sm transition-colors duration-200"
+            >
+              Volver al menú
+            </button>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
+  // CASO 3: ÉXITO (solo cuando el pago fue completado)
   return (
     <motion.div
       initial={{ opacity: 0 }}

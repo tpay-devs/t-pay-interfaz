@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, Trash2, CreditCard, Banknote, ShieldCheck, Lock, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, Trash2, CreditCard, Banknote, ShieldCheck, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useRestaurant } from '@/context/RestaurantContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +27,7 @@ const CheckoutPage = () => {
   const [step, setStep] = useState<Step>('cart');
   const [selectedTip, setSelectedTip] = useState<number | null>(10);
   const [paymentMethod, setPaymentMethod] = useState<'mercadopago' | 'cash'>('mercadopago');
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const formatPrice = (price: number) => {
     return `$${price.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
@@ -45,6 +46,7 @@ const CheckoutPage = () => {
       if (result && result.success) {
 
         if (result.checkoutUrl) {
+          setIsRedirecting(true);
           window.location.href = result.checkoutUrl;
           return;
         }
@@ -94,6 +96,17 @@ const CheckoutPage = () => {
       navigate('/');
     }
   };
+
+  // Pantalla de redirección a Mercado Pago (evita flash de carrito vacío)
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8">
+        <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+        <p className="text-lg font-semibold mb-1">Redirigiendo a Mercado Pago</p>
+        <p className="text-sm text-muted-foreground">Espera un momento...</p>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (

@@ -74,8 +74,21 @@ export const OrderStatusTracker = () => {
 
         fetchActiveOrders();
 
-        const interval = setInterval(fetchActiveOrders, 30000);
-        return () => clearInterval(interval);
+        // Polling cada 15s para actualizaciones de estado
+        const interval = setInterval(fetchActiveOrders, 15000);
+
+        // Fetch inmediato cuando el usuario vuelve a la pestaña (ej: volviendo de Mercado Pago)
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchActiveOrders();
+            }
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
     }, [restaurantId]);
 
     if (activeOrders.length === 0) return null;
@@ -145,7 +158,7 @@ export const OrderStatusTracker = () => {
                         {activeOrders.map((order) => {
 
                             const isUnpaidMP =
-                                order.payment_status === 'unpaid' &&
+                                (order.payment_status === 'unpaid' || order.payment_status === 'pending') &&
                                 order.payment_method === 'mercadopago' &&
                                 order.mercadopago_preference_id;
 
@@ -159,6 +172,11 @@ export const OrderStatusTracker = () => {
                                             <p className="text-2xl font-bold tracking-tight">
                                                 {order.pickup_code || order.order_number}
                                             </p>
+                                            {order.pickup_code && (
+                                                <p className="text-xs text-muted-foreground mt-0.5">
+                                                    Pedido #{order.order_number}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold ${order.status === 'ready' ? 'bg-green-100 text-green-700' :
                                             order.status === 'preparing' ? 'bg-amber-100 text-amber-700' :
